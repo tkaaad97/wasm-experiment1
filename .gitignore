@@ -1,0 +1,10 @@
+.stack
+.stack/
+.stack-work/
+*~
+*.swp
+*.o
+*.so
+.nvimrc
+.vimrc
+.vscode
