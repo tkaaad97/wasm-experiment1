@@ -10,6 +10,8 @@ dependencies:
 
 library:
   source-dirs: src
+  extra-libraries:
+  - wasmtime
 
 executables:
   wasm-experiment1-exe:
