@@ -7,6 +7,9 @@ extra-source-files:
 
 dependencies:
 - base >= 4.8 && < 5
+- text
+- text-builder
+- vector
 
 library:
   source-dirs: src

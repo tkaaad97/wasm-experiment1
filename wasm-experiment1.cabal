@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c3d9b6b09c2e05452f2b51abbabbe74f857dd89817b916b18a766a35b9a6260f
+-- hash: 3b771b263a09d0b669ee94da73ce81f06d38f24a1126e080c955451b7a6d4c5a
 
 name:           wasm-experiment1
 version:        0.1.0.0
@@ -18,6 +18,7 @@ library
   exposed-modules:
       Lib
       Wasm
+      Wasm.TextPrinter
       Wasm.Types
   other-modules:
       Paths_wasm_experiment1
@@ -27,6 +28,9 @@ library
       wasmtime
   build-depends:
       base >=4.8 && <5
+    , text
+    , text-builder
+    , vector
   default-language: Haskell2010
 
 executable wasm-experiment1-exe
@@ -38,6 +42,9 @@ executable wasm-experiment1-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.8 && <5
+    , text
+    , text-builder
+    , vector
     , wasm-experiment1
   default-language: Haskell2010
 
@@ -51,5 +58,8 @@ test-suite wasm-experiment1-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.8 && <5
+    , text
+    , text-builder
+    , vector
     , wasm-experiment1
   default-language: Haskell2010

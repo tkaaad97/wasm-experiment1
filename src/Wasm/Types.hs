@@ -4,7 +4,10 @@ module Wasm.Types
     , Module(..)
     , NumType(..)
     , TypeIdx(..)
+    , RefType(..)
     , ValType(..)
+    , ResultType(..)
+    , FuncType(..)
     , IUnop(..)
     , IBinop(..)
     , FUnop(..)
@@ -14,11 +17,12 @@ module Wasm.Types
     , FRelop(..)
     ) where
 
+import Data.Vector (Vector)
 import Data.Word (Word32, Word64)
 
 data Module = Module
-    { moduleFuncs    :: ![Func]
-    --, moduleTypes    :: ![Type']
+    { moduleFuncs :: !(Vector Func)
+    , moduleTypes :: !(Vector FuncType)
     --, moduleGlobals  :: ![Global]
     --, moduleTables   :: ![Table]
     --, moduleMemories :: ![Memory]
@@ -37,9 +41,20 @@ data NumType =
     F64
     deriving (Show, Eq)
 
+data RefType =
+    ExternRef |
+    FuncRef
+    deriving (Show, Eq)
+
 data ValType =
-    NumType
-    -- RefType
+    NumType !NumType |
+    RefType !RefType
+    deriving (Show, Eq)
+
+newtype ResultType = ResultType [ValType]
+    deriving (Show, Eq)
+
+data FuncType = FuncType !ResultType !ResultType
     deriving (Show, Eq)
 
 data Func = Func
