@@ -1,7 +1,15 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 module Wasmtime.Raw
-    ( wasmEngineNew
+    ( WasmEngineT
+    , WasmByteVecT(..)
+    , WasmExternVecT(..)
+    , wasmByteVecNewUninitialized
+    , wasmEngineNew
+    , wasmExternAsFunc
+    , wasmInstanceExports
     , wasmStoreNew
+    , wasmtimeInstanceNew
+    , wasmtimeModuleNew
     ) where
 
 import Control.Exception (throwIO)
@@ -156,7 +164,7 @@ foreign import ccall "wasm_instance_delete" wasmInstanceDelete :: Ptr WasmInstan
 foreign import ccall "wasm_instance_exports" wasmInstanceExports :: Ptr WasmInstanceT -> Ptr WasmExternVecT -> IO ()
 foreign import ccall "wasm_module_delete" wasmModuleDelete :: Ptr WasmModuleT -> IO ()
 foreign import ccall "wasm_store_delete" wasmStoreDelete :: Ptr WasmStoreT -> IO ()
-foreign import ccall "wasm_store_new" wasmStoreNew :: IO (Ptr WasmStoreT)
+foreign import ccall "wasm_store_new" wasmStoreNew :: Ptr WasmEngineT -> IO (Ptr WasmStoreT)
 foreign import ccall "wasmtime_func_call" wasmtimeFuncCall :: Ptr WasmFuncT -> Ptr WasmValVecT -> Ptr WasmValVecT -> IO (Ptr WasmtimeErrorT)
 foreign import ccall "wasmtime_instance_new" wasmtimeInstanceNew :: Ptr WasmStoreT -> Ptr WasmModuleT -> Ptr WasmExternVecT -> Ptr (Ptr WasmInstanceT) -> Ptr (Ptr WasmTrapT) -> IO (Ptr WasmtimeErrorT)
 foreign import ccall "wasmtime_module_new" wasmtimeModuleNew :: Ptr WasmEngineT -> Ptr WasmByteVecT -> Ptr (Ptr WasmModuleT) -> IO (Ptr WasmtimeErrorT)
