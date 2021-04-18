@@ -2,5 +2,9 @@ resolver: lts-16.31
 packages:
 - .
 
+extra-include-dirs:
+  - third_party/wasmtime/crates/c-api/wasm-c-api/include
+  - third_party/wasmtime/crates/c-api/include
+
 extra-lib-dirs:
-  - ./third_party/wasmtime/target/release
+  - third_party/wasmtime/target/release/libwasm.a

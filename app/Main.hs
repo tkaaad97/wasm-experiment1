@@ -1,6 +1,9 @@
 module Main where
 
 import Lib
+import Wasmtime.Raw (wasmEngineNew)
 
 main :: IO ()
-main = someFunc
+main = do
+    engine <- wasmEngineNew
+    return ()

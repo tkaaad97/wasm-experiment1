@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8e33c8a0b0a141c6051ca3ecb5ed95f5639592d370f68482fcfa8bd7616410b5
+-- hash: 2542488f583207856978ff6c2bea4e524207c674107c897b1a908e36de99934d
 
 name:           wasm-experiment1
 version:        0.1.0.0
@@ -20,11 +20,13 @@ library
       Wasm
       Wasm.TextPrinter
       Wasm.Types
+      Wasmtime.Raw
   other-modules:
       Paths_wasm_experiment1
   hs-source-dirs:
       src
-  ghc-options: -pgml gcc "-optl-Wl,--allow-multiple-definition" "-optl-Wl,--whole-archive" "-optl-Wl,-Bstatic" "-optl-Wl,-lwasmtime" "-optl-Wl,-Bdynamic" "-optl-Wl,--no-whole-archive"
+  extra-libraries:
+      wasmtime
   build-depends:
       base >=4.8 && <5
     , bytestring
