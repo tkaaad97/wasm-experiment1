@@ -30,7 +30,7 @@ module Wasmtime.Raw
 
 import Control.Exception (throwIO)
 import Data.Word (Word32, Word64, Word8)
-import Foreign (Ptr, Storable(..), castPtr, plusPtr)
+import Foreign (FunPtr, Ptr, Storable(..), castPtr, plusPtr)
 
 data WasmEngineT
 
@@ -59,6 +59,8 @@ data WasmValVecT = WasmValVecT !Word32 !(Ptr WasmValT)
 data WasmValTypeT
 
 data WasmValTypeVecT = WasmValTypeVecT !Word32 !(Ptr (Ptr WasmValTypeT))
+
+type WasmFuncCallbackT = Foreign.FunPtr (Ptr WasmValVecT -> Ptr WasmValVecT -> IO (Ptr WasmTrapT))
 
 data WasmFuncT
 
@@ -196,6 +198,7 @@ foreign import ccall "wasm_byte_vec_new_uninitialized" wasmByteVecNewUninitializ
 foreign import ccall "wasm_engine_new" wasmEngineNew :: IO (Ptr WasmEngineT)
 foreign import ccall "wasm_extern_as_func" wasmExternAsFunc :: Ptr WasmExternT -> IO (Ptr WasmFuncT)
 foreign import ccall "wasm_extern_vec_delete" wasmExternVecDelete :: Ptr WasmExternVecT -> IO ()
+foreign import ccall "wasm_func_new" wasmFuncNew :: Ptr WasmStoreT -> Ptr WasmFuncTypeT -> Ptr WasmValTypeVecT -> WasmFuncCallbackT -> IO ()
 foreign import ccall "wasm_functype_new" wasmFuncTypeNew :: Ptr WasmValTypeVecT -> Ptr WasmValTypeVecT -> IO (Ptr WasmFuncTypeT)
 foreign import ccall "wasm_instance_delete" wasmInstanceDelete :: Ptr WasmInstanceT -> IO ()
 foreign import ccall "wasm_instance_exports" wasmInstanceExports :: Ptr WasmInstanceT -> Ptr WasmExternVecT -> IO ()
