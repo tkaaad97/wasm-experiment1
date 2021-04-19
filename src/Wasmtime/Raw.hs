@@ -15,6 +15,12 @@ module Wasmtime.Raw
     , wasmStoreNew
     , wasmTrapDelete
     , wasmTrapMessage
+    , wasmValTypeDelete
+    , wasmValTypeKind
+    , wasmValTypeNew
+    , wasmValTypeVecDelete
+    , wasmValTypeVecNew
+    , wasmValTypeVecNewUninitialized
     , wasmtimeErrorDelete
     , wasmtimeErrorMessage
     , wasmtimeFuncCall
@@ -34,7 +40,7 @@ data WasmExternT
 
 data WasmExternVecT = WasmExternVecT !Word32 !(Ptr (Ptr WasmExternT))
 
-newtype WasmValkindT = WasmValkindT Word8
+newtype WasmValKindT = WasmValKindT Word8
     deriving (Show, Eq, Storable)
 
 data WasmRefT
@@ -50,13 +56,19 @@ data WasmValT =
 
 data WasmValVecT = WasmValVecT !Word32 !(Ptr WasmValT)
 
+data WasmValTypeT
+
+data WasmValTypeVecT = WasmValTypeVecT !Word32 !(Ptr (Ptr WasmValTypeT))
+
+data WasmFuncT
+
 data WasmStoreT
 
 data WasmModuleT
 
 data WasmInstanceT
 
-data WasmFuncT
+data WasmFuncTypeT
 
 data WasmTrapT
 
@@ -96,43 +108,43 @@ instance Storable WasmValT where
         peekVal =<< peek (castPtr ptr)
         where
         peekVal k
-            | k == wasmValkindI32 = do
+            | k == wasmValKindI32 = do
                 d <- peek $ castPtr ptr `plusPtr` 8
                 return (WasmValI32 d)
-            | k == wasmValkindI64 = do
+            | k == wasmValKindI64 = do
                 d <- peek $ castPtr ptr `plusPtr` 8
                 return (WasmValI64 d)
-            | k == wasmValkindF32 = do
+            | k == wasmValKindF32 = do
                 d <- peek $ castPtr ptr `plusPtr` 8
                 return (WasmValF32 d)
-            | k == wasmValkindF64 = do
+            | k == wasmValKindF64 = do
                 d <- peek $ castPtr ptr `plusPtr` 8
                 return (WasmValF64 d)
-            | k == wasmValkindAnyRef = do
+            | k == wasmValKindAnyRef = do
                 d <- peek $ castPtr ptr `plusPtr` 8
                 return (WasmValAnyRef d)
-            | k == wasmValkindFuncRef = do
+            | k == wasmValKindFuncRef = do
                 d <- peek $ castPtr ptr `plusPtr` 8
                 return (WasmValFuncRef d)
             | otherwise = throwIO . userError $ "Unknown kind: " ++ show k
 
     poke ptr (WasmValI32 a) = do
-        poke (castPtr ptr) wasmValkindI32
+        poke (castPtr ptr) wasmValKindI32
         poke (castPtr ptr `plusPtr` 8) a
     poke ptr (WasmValI64 a) = do
-        poke (castPtr ptr) wasmValkindI64
+        poke (castPtr ptr) wasmValKindI64
         poke (castPtr ptr `plusPtr` 8) a
     poke ptr (WasmValF32 a) = do
-        poke (castPtr ptr) wasmValkindF32
+        poke (castPtr ptr) wasmValKindF32
         poke (castPtr ptr `plusPtr` 8) a
     poke ptr (WasmValF64 a) = do
-        poke (castPtr ptr) wasmValkindF64
+        poke (castPtr ptr) wasmValKindF64
         poke (castPtr ptr `plusPtr` 8) a
     poke ptr (WasmValAnyRef a) = do
-        poke (castPtr ptr) wasmValkindAnyRef
+        poke (castPtr ptr) wasmValKindAnyRef
         poke (castPtr ptr `plusPtr` 8) a
     poke ptr (WasmValFuncRef a) = do
-        poke (castPtr ptr) wasmValkindFuncRef
+        poke (castPtr ptr) wasmValKindFuncRef
         poke (castPtr ptr `plusPtr` 8) a
 
 instance Storable WasmValVecT where
@@ -148,29 +160,43 @@ instance Storable WasmValVecT where
         poke (castPtr ptr) size
         poke (castPtr ptr `plusPtr` 8) d
 
-wasmValkindI32 :: WasmValkindT
-wasmValkindI32 = WasmValkindT 0
+instance Storable WasmValTypeVecT where
+    sizeOf _ = 16
+    alignment _ = 8
 
-wasmValkindI64 :: WasmValkindT
-wasmValkindI64 = WasmValkindT 1
+    peek ptr = do
+        size <- peek $ castPtr ptr
+        d <- peek $ castPtr ptr `plusPtr` 8
+        return (WasmValTypeVecT size d)
 
-wasmValkindF32 :: WasmValkindT
-wasmValkindF32 = WasmValkindT 2
+    poke ptr (WasmValTypeVecT size d) = do
+        poke (castPtr ptr) size
+        poke (castPtr ptr `plusPtr` 8) d
 
-wasmValkindF64 :: WasmValkindT
-wasmValkindF64 = WasmValkindT 3
+wasmValKindI32 :: WasmValKindT
+wasmValKindI32 = WasmValKindT 0
 
-wasmValkindAnyRef :: WasmValkindT
-wasmValkindAnyRef = WasmValkindT 128
+wasmValKindI64 :: WasmValKindT
+wasmValKindI64 = WasmValKindT 1
 
-wasmValkindFuncRef :: WasmValkindT
-wasmValkindFuncRef = WasmValkindT 129
+wasmValKindF32 :: WasmValKindT
+wasmValKindF32 = WasmValKindT 2
+
+wasmValKindF64 :: WasmValKindT
+wasmValKindF64 = WasmValKindT 3
+
+wasmValKindAnyRef :: WasmValKindT
+wasmValKindAnyRef = WasmValKindT 128
+
+wasmValKindFuncRef :: WasmValKindT
+wasmValKindFuncRef = WasmValKindT 129
 
 foreign import ccall "wasm_byte_vec_delete" wasmByteVecDelete :: Ptr WasmByteVecT -> IO ()
 foreign import ccall "wasm_byte_vec_new_uninitialized" wasmByteVecNewUninitialized :: Ptr WasmByteVecT -> Word32 -> IO ()
 foreign import ccall "wasm_engine_new" wasmEngineNew :: IO (Ptr WasmEngineT)
 foreign import ccall "wasm_extern_as_func" wasmExternAsFunc :: Ptr WasmExternT -> IO (Ptr WasmFuncT)
 foreign import ccall "wasm_extern_vec_delete" wasmExternVecDelete :: Ptr WasmExternVecT -> IO ()
+foreign import ccall "wasm_functype_new" wasmFuncTypeNew :: Ptr WasmValTypeVecT -> Ptr WasmValTypeVecT -> IO (Ptr WasmFuncTypeT)
 foreign import ccall "wasm_instance_delete" wasmInstanceDelete :: Ptr WasmInstanceT -> IO ()
 foreign import ccall "wasm_instance_exports" wasmInstanceExports :: Ptr WasmInstanceT -> Ptr WasmExternVecT -> IO ()
 foreign import ccall "wasm_module_delete" wasmModuleDelete :: Ptr WasmModuleT -> IO ()
@@ -178,6 +204,12 @@ foreign import ccall "wasm_store_delete" wasmStoreDelete :: Ptr WasmStoreT -> IO
 foreign import ccall "wasm_store_new" wasmStoreNew :: Ptr WasmEngineT -> IO (Ptr WasmStoreT)
 foreign import ccall "wasm_trap_delete" wasmTrapDelete :: Ptr WasmTrapT -> IO ()
 foreign import ccall "wasm_trap_message" wasmTrapMessage :: Ptr WasmTrapT -> Ptr WasmByteVecT -> IO ()
+foreign import ccall "wasm_valtype_delete" wasmValTypeDelete :: Ptr WasmValTypeT -> IO ()
+foreign import ccall "wasm_valtype_kind" wasmValTypeKind :: Ptr WasmValTypeT -> IO WasmValKindT
+foreign import ccall "wasm_valtype_new" wasmValTypeNew :: WasmValKindT -> IO (Ptr WasmValTypeT)
+foreign import ccall "wasm_valtype_vec_delete" wasmValTypeVecDelete :: Ptr WasmValTypeVecT -> IO ()
+foreign import ccall "wasm_valtype_vec_new" wasmValTypeVecNew :: Ptr WasmValTypeVecT -> Word32 -> Ptr (Ptr WasmValTypeT) -> IO ()
+foreign import ccall "wasm_valtype_vec_new_uninitialized" wasmValTypeVecNewUninitialized :: Ptr WasmValTypeVecT -> Word32 -> IO ()
 foreign import ccall "wasmtime_error_delete" wasmtimeErrorDelete :: Ptr WasmtimeErrorT -> IO ()
 foreign import ccall "wasmtime_error_message" wasmtimeErrorMessage :: Ptr WasmtimeErrorT -> Ptr WasmByteVecT -> IO ()
 foreign import ccall "wasmtime_func_call" wasmtimeFuncCall :: Ptr WasmFuncT -> Ptr WasmValVecT -> Ptr WasmValVecT -> IO (Ptr WasmtimeErrorT)
