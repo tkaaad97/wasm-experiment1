@@ -10,8 +10,12 @@ module Wasmtime.Raw
     , wasmByteVecNewUninitialized
     , wasmEngineNew
     , wasmExternAsFunc
+    , wasmExternVecDelete
     , wasmInstanceExports
     , wasmStoreNew
+    , wasmTrapDelete
+    , wasmTrapMessage
+    , wasmtimeErrorDelete
     , wasmtimeErrorMessage
     , wasmtimeFuncCall
     , wasmtimeInstanceNew
@@ -166,11 +170,15 @@ foreign import ccall "wasm_byte_vec_delete" wasmByteVecDelete :: Ptr WasmByteVec
 foreign import ccall "wasm_byte_vec_new_uninitialized" wasmByteVecNewUninitialized :: Ptr WasmByteVecT -> Word32 -> IO ()
 foreign import ccall "wasm_engine_new" wasmEngineNew :: IO (Ptr WasmEngineT)
 foreign import ccall "wasm_extern_as_func" wasmExternAsFunc :: Ptr WasmExternT -> IO (Ptr WasmFuncT)
+foreign import ccall "wasm_extern_vec_delete" wasmExternVecDelete :: Ptr WasmExternVecT -> IO ()
 foreign import ccall "wasm_instance_delete" wasmInstanceDelete :: Ptr WasmInstanceT -> IO ()
 foreign import ccall "wasm_instance_exports" wasmInstanceExports :: Ptr WasmInstanceT -> Ptr WasmExternVecT -> IO ()
 foreign import ccall "wasm_module_delete" wasmModuleDelete :: Ptr WasmModuleT -> IO ()
 foreign import ccall "wasm_store_delete" wasmStoreDelete :: Ptr WasmStoreT -> IO ()
 foreign import ccall "wasm_store_new" wasmStoreNew :: Ptr WasmEngineT -> IO (Ptr WasmStoreT)
+foreign import ccall "wasm_trap_delete" wasmTrapDelete :: Ptr WasmTrapT -> IO ()
+foreign import ccall "wasm_trap_message" wasmTrapMessage :: Ptr WasmTrapT -> Ptr WasmByteVecT -> IO ()
+foreign import ccall "wasmtime_error_delete" wasmtimeErrorDelete :: Ptr WasmtimeErrorT -> IO ()
 foreign import ccall "wasmtime_error_message" wasmtimeErrorMessage :: Ptr WasmtimeErrorT -> Ptr WasmByteVecT -> IO ()
 foreign import ccall "wasmtime_func_call" wasmtimeFuncCall :: Ptr WasmFuncT -> Ptr WasmValVecT -> Ptr WasmValVecT -> IO (Ptr WasmtimeErrorT)
 foreign import ccall "wasmtime_instance_new" wasmtimeInstanceNew :: Ptr WasmStoreT -> Ptr WasmModuleT -> Ptr WasmExternVecT -> Ptr (Ptr WasmInstanceT) -> Ptr (Ptr WasmTrapT) -> IO (Ptr WasmtimeErrorT)
