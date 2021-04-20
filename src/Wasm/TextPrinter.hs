@@ -233,7 +233,7 @@ buildInstr (GlobalSet a)        = "global.set " <> Builder.decimal a
 buildExports :: Vector Export -> [Builder]
 buildExports = Vector.toList . Vector.map buildExport
 
-buildExport (Export name (ExportFunc idx)) = mconcat ["(export ", Builder.fromText name, " (func ", Builder.decimal idx, ")"]
-buildExport (Export name (ExportTable idx)) = mconcat ["(export ", Builder.fromText name, " (table ", Builder.decimal idx, ")"]
-buildExport (Export name (ExportMemory idx)) = mconcat ["(export ", Builder.fromText name, " (mem ", Builder.decimal idx, ")"]
-buildExport (Export name (ExportGlobal idx)) = mconcat ["(export ", Builder.fromText name, " (global ", Builder.decimal idx, ")"]
+buildExport (Export name (ExportFunc idx)) = mconcat ["(export \"", Builder.fromText name, "\" (func ", Builder.decimal idx, "))"]
+buildExport (Export name (ExportTable idx)) = mconcat ["(export \"", Builder.fromText name, "\" (table ", Builder.decimal idx, "))"]
+buildExport (Export name (ExportMemory idx)) = mconcat ["(export \"", Builder.fromText name, "\" (mem ", Builder.decimal idx, "))"]
+buildExport (Export name (ExportGlobal idx)) = mconcat ["(export \"", Builder.fromText name, "\" (global ", Builder.decimal idx, "))"]
