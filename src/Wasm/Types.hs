@@ -3,7 +3,6 @@ module Wasm.Types
     , Instr(..)
     , Module(..)
     , NumType(..)
-    , TypeIdx(..)
     , RefType(..)
     , ValType(..)
     , ResultType(..)
@@ -15,24 +14,24 @@ module Wasm.Types
     , ITestop(..)
     , IRelop(..)
     , FRelop(..)
+    , Export(..)
+    , ExportDesc(..)
     ) where
 
+import Data.Text (Text)
 import Data.Vector (Vector)
 import Data.Word (Word32, Word64)
 
 data Module = Module
-    { moduleFuncs :: !(Vector Func)
-    , moduleTypes :: !(Vector FuncType)
+    { moduleTypes   :: !(Vector FuncType)
+    , moduleFuncs   :: !(Vector Func)
     --, moduleGlobals  :: ![Global]
     --, moduleTables   :: ![Table]
     --, moduleMemories :: ![Memory]
     --, moduleDatas    :: ![DataSegment]
     --, moduleImports  :: ![Import]
-    --, moduleExports  :: ![Export]
+    , moduleExports :: !(Vector Export)
     } deriving (Show, Eq)
-
-newtype TypeIdx = TypeIdx Int
-    deriving (Show, Eq)
 
 data NumType =
     I32 |
@@ -58,7 +57,7 @@ data FuncType = FuncType !ResultType !ResultType
     deriving (Show, Eq)
 
 data Func = Func
-    { funcType   :: !TypeIdx
+    { funcType   :: !Word32
     , funcLocals :: ![ValType]
     , funcBody   :: ![Instr]
     } deriving (Show, Eq)
@@ -152,5 +151,22 @@ data Instr =
     I32Relation !IRelop |
     I64Relation !IRelop |
     F32Relation !FRelop |
-    F64Relation !FRelop
+    F64Relation !FRelop |
+    LocalGet !Word32 |
+    LocalSet !Word32 |
+    LocalTee !Word32 |
+    GlobalGet !Word32 |
+    GlobalSet !Word32
+    deriving (Show, Eq)
+
+data Export = Export
+    { exportName :: !Text
+    , exportDesc :: !ExportDesc
+    } deriving (Show, Eq)
+
+data ExportDesc =
+    ExportFunc !Word32 |
+    ExportTable !Word32 |
+    ExportMemory !Word32 |
+    ExportGlobal !Word32
     deriving (Show, Eq)

@@ -7,11 +7,11 @@ import Data.List (intersperse)
 import Data.Text (Text)
 import qualified Data.Text.Lazy as Text (toStrict)
 import Data.Text.Lazy.Builder (Builder)
-import qualified Data.Text.Lazy.Builder as Builder (toLazyText)
+import qualified Data.Text.Lazy.Builder as Builder (fromText, toLazyText)
 import qualified Data.Text.Lazy.Builder.Int as Builder (decimal)
 import qualified Data.Text.Lazy.Builder.RealFloat as Builder (realFloat)
 import Data.Vector (Vector)
-import qualified Data.Vector as Vector (imap, toList, (!))
+import qualified Data.Vector as Vector (imap, map, toList, (!))
 import Wasm.Types
 
 printText :: Module -> Text
@@ -22,12 +22,13 @@ intercalateBuilder x xs = mconcat (intersperse x xs)
 
 buildModule :: Module -> Builder
 buildModule m =
-    intercalateBuilder "\n  " (["(module"] ++ buildTypes types ++ buildFuncs types funcs)
+    intercalateBuilder "\n  " (["(module"] ++ buildTypes types ++ buildFuncs types funcs ++ buildExports exports)
     <>
     "\n)\n"
     where
     funcs = moduleFuncs m
     types = moduleTypes m
+    exports = moduleExports m
 
 buildIndex :: Int -> Builder
 buildIndex i =
@@ -95,12 +96,12 @@ buildFuncs :: Vector FuncType -> Vector Func -> [Builder]
 buildFuncs types = Vector.toList . Vector.imap f
     where
     f idx func =
-        let TypeIdx tidx = funcType func
+        let tidx = fromIntegral (funcType func)
             ftype = types Vector.! tidx
         in buildFunc ftype idx func
 
 buildFunc :: FuncType -> Int -> Func -> Builder
-buildFunc (FuncType (ResultType params) (ResultType results)) funcidx (Func (TypeIdx typeidx) locals body) =
+buildFunc (FuncType (ResultType params) (ResultType results)) funcidx (Func typeidx locals body) =
     intercalateBuilder "\n    "
     [ "(func"
     , buildIndex funcidx
@@ -223,3 +224,16 @@ buildInstr (F64Relation Lt)     = "f64.lt"
 buildInstr (F64Relation Gt)     = "f64.gt"
 buildInstr (F64Relation Le)     = "f64.le"
 buildInstr (F64Relation Ge)     = "f64.ge"
+buildInstr (LocalGet a)         = "local.get " <> Builder.decimal a
+buildInstr (LocalSet a)         = "local.set " <> Builder.decimal a
+buildInstr (LocalTee a)         = "local.tee " <> Builder.decimal a
+buildInstr (GlobalGet a)        = "global.get " <> Builder.decimal a
+buildInstr (GlobalSet a)        = "global.set " <> Builder.decimal a
+
+buildExports :: Vector Export -> [Builder]
+buildExports = Vector.toList . Vector.map buildExport
+
+buildExport (Export name (ExportFunc idx)) = mconcat ["(export ", Builder.fromText name, " (func ", Builder.decimal idx, ")"]
+buildExport (Export name (ExportTable idx)) = mconcat ["(export ", Builder.fromText name, " (table ", Builder.decimal idx, ")"]
+buildExport (Export name (ExportMemory idx)) = mconcat ["(export ", Builder.fromText name, " (mem ", Builder.decimal idx, ")"]
+buildExport (Export name (ExportGlobal idx)) = mconcat ["(export ", Builder.fromText name, " (global ", Builder.decimal idx, ")"]

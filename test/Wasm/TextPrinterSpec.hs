@@ -1,10 +1,12 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP               #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Wasm.TextPrinterSpec
     ( spec
     ) where
 
 import qualified Data.ByteString as ByteString (readFile, writeFile)
 import qualified Data.Text.Encoding as Text (decodeUtf8, encodeUtf8)
+import qualified Data.Vector as Vector
 import System.Directory (createDirectoryIfMissing, doesFileExist)
 import System.FilePath (takeDirectory, (<.>), (</>))
 import Test.Hspec
@@ -14,7 +16,13 @@ import Wasm.Types
 modules :: [(String, Module)]
 modules =
     [ ( "empty-module"
-      , Module mempty mempty
+      , Module mempty mempty mempty
+      ),
+      ( "module1"
+      , Module
+        (Vector.singleton (FuncType (ResultType [NumType I32]) (ResultType [NumType I32])))
+        (Vector.singleton (Func 0 [] [LocalGet 0, LocalGet 1, I32Binary IAdd]))
+        (Vector.singleton (Export "add" (ExportFunc 0)))
       )
     ]
 
