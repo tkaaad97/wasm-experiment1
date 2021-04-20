@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: dfdf8739532754e74eeaa731efc952624553b70b0a65e28810e50450981d9367
+-- hash: 7d8d77ae4a23a5e18fe9133a635e2cdd102ecf54c38360fbd0058f9eca2c9eac
 
 name:           wasm-experiment1
 version:        0.1.0.0
@@ -30,7 +30,6 @@ library
       base >=4.8 && <5
     , bytestring
     , text
-    , text-builder
     , vector
   default-language: Haskell2010
 
@@ -45,7 +44,6 @@ executable wasm-experiment1-exe
       base >=4.8 && <5
     , bytestring
     , text
-    , text-builder
     , vector
     , wasm-experiment1
   default-language: Haskell2010
@@ -66,7 +64,6 @@ test-suite wasm-experiment1-test
     , filepath
     , hspec
     , text
-    , text-builder
     , vector
     , wasm-experiment1
   default-language: Haskell2010

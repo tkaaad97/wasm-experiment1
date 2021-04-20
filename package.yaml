@@ -9,7 +9,6 @@ dependencies:
 - base >= 4.8 && < 5
 - bytestring
 - text
-- text-builder
 - vector
 
 library:
