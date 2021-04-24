@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 module SampleLang.Parser
-    (
+    ( expr
     ) where
 
 import Control.Monad (void)
@@ -105,13 +105,19 @@ alphabet :: Parser Char
 alphabet = Parser.satisfy isAlpha
 
 expr :: Parser Expr
-expr = undefined
+expr =
+    -- todo
+    assignment
 
---binary :: Parser Binary
+assignment :: Parser Expr
+assignment =
+    -- todo
+    relational
 
---assignment :: Parser Assignment
-
---relation :: Parser Relation
+relational :: Parser Expr
+relational =
+    -- todo
+    addSub
 
 --statement :: Parser Statement
 
