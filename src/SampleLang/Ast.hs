@@ -3,10 +3,10 @@ module SampleLang.Ast
     , Type'(..)
     , FunctionType(..)
     , Parameter(..)
-    , UnOp(..)
-    , BinOp(..)
-    , RelOp(..)
-    , ConstExpr(..)
+    , Unary(..)
+    , Binary(..)
+    , Relation(..)
+    , Constant(..)
     , Statement(..)
     , Declaration(..)
     , FunctionDefinition(..)
@@ -17,13 +17,13 @@ import Data.Text (Text)
 import Data.Word (Word32)
 
 data Expr =
-    Unary !UnOp |
-    Binary !BinOp |
-    Relation !RelOp |
-    IndexAccess !Text !Expr |
-    Constant !ConstExpr |
-    Reference !Text |
-    FunctionCall !Text
+    ExprUnary !Unary |
+    ExprBinary !Binary |
+    ExprRelation !Relation |
+    ExprIndexAccess !Text !Expr |
+    ExprConstant !Constant |
+    ExprReference !Text |
+    ExprFunctionCall !Text
     deriving (Show, Eq)
 
 data Type' =
@@ -41,21 +41,21 @@ data FunctionType = FunctionType ![Parameter] !Type'
 data Parameter = Parameter !Text !Type'
     deriving (Show, Eq)
 
-data UnOp =
-    UnaryNegate !Expr |
-    UnaryNot !Expr |
+data Unary =
+    Negate !Expr |
+    Not !Expr |
     Increment !Expr |
     Decrement !Expr
     deriving (Show, Eq)
 
-data BinOp =
+data Binary =
     Add !Expr !Expr |
     Sub !Expr !Expr |
     Mul !Expr !Expr |
     Div !Expr !Expr
     deriving (Show, Eq)
 
-data RelOp =
+data Relation =
     Equ !Expr !Expr |
     Neq !Expr !Expr |
     Lt !Expr !Expr |
@@ -64,9 +64,8 @@ data RelOp =
     Ge !Expr !Expr
     deriving (Show, Eq)
 
-data ConstExpr =
-    ConstInt !Int32 |
-    ConstUInt !Word32 |
+data Constant =
+    ConstInt !Integer |
     ConstBool !Bool |
     ConstDouble !Double
     deriving (Show, Eq)
