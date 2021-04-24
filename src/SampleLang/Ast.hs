@@ -12,9 +12,8 @@ module SampleLang.Ast
     , FunctionDefinition(..)
     ) where
 
-import Data.Int (Int32)
 import Data.Text (Text)
-import Data.Word (Word32)
+import Data.Word (Word64)
 
 data Expr =
     ExprUnary !Unary |
@@ -65,7 +64,7 @@ data Relation =
     deriving (Show, Eq)
 
 data Constant =
-    ConstInt !Integer |
+    ConstInt !Word64 |
     ConstBool !Bool |
     ConstDouble !Double
     deriving (Show, Eq)

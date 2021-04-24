@@ -8,13 +8,14 @@ import Data.Char (isAlpha)
 import Data.Foldable (foldl')
 import Data.Text (Text)
 import qualified Data.Text as Text (pack)
+import Data.Word (Word64)
 import SampleLang.Ast
 import Text.Megaparsec ((<|>))
 import qualified Text.Megaparsec as Parser (Parsec, between, choice, many,
                                             satisfy)
 import qualified Text.Megaparsec.Char as Char (alphaNumChar, space)
 import qualified Text.Megaparsec.Char.Lexer as Lexer (decimal, float, lexeme,
-                                                      signed, symbol)
+                                                      symbol)
 
 type Parser = Parser.Parsec String Text
 
@@ -83,9 +84,8 @@ constant =
     (ExprConstant . ConstBool <$> bool) <|>
     (ExprConstant . ConstDouble <$> double)
 
-integer :: Parser Integer
+integer :: Parser Word64
 integer =
-    Lexer.signed Char.space (Lexer.lexeme Char.space Lexer.decimal) <|>
     Lexer.lexeme Char.space Lexer.decimal
 
 bool :: Parser Bool
