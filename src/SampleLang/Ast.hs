@@ -8,7 +8,6 @@ module SampleLang.Ast
     , Relation(..)
     , Constant(..)
     , Statement(..)
-    , Declaration(..)
     , FunctionDefinition(..)
     ) where
 
@@ -18,7 +17,7 @@ import Data.Word (Word64)
 data Expr =
     ExprUnary !Unary |
     ExprBinary !Binary |
-    ExprRelation !Relation |
+    ExprRelational !Relation |
     ExprIndexAccess !Text !Expr |
     ExprConstant !Constant |
     ExprReference !Text |
@@ -74,12 +73,8 @@ data Statement =
     StatementFor !Expr !Expr !Expr ![Statement] |
     StatementWhile !Expr ![Statement] |
     StatementExpr !Expr |
-    StatementDecl !Declaration |
+    StatementDecl !Parameter |
     StatementReturn !Expr
-    deriving (Show, Eq)
-
-data Declaration =
-    Declaration !Text !Expr
     deriving (Show, Eq)
 
 data FunctionDefinition =
