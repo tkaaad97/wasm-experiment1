@@ -127,7 +127,7 @@ assignment :: Parser Expr
 assignment =
     Lexer.lexeme Char.space $ do
         a <- equality
-        Parser.option a (symbol "=" *> (ExprAssign a <$> equality))
+        Parser.option a (symbol "=" *> (ExprAssign a <$> assignment))
 
 equality :: Parser Expr
 equality =

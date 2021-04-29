@@ -28,6 +28,7 @@ exprCases =
     , ("add nums", "1+2", Right $ ExprBinOp (Add (ExprConstant (ConstInt 1)) (ExprConstant (ConstInt 2))))
     , ("add and mul", "1+2*3", Right $ ExprBinOp (Add (ExprConstant (ConstInt 1)) (ExprBinOp (Mul (ExprConstant (ConstInt 2)) (ExprConstant (ConstInt 3))))))
     , ("assign", "a = 1", Right $ ExprAssign (ExprReference "a") (ExprConstant (ConstInt 1)))
+    , ("assign", "a = b = 1", Right $ ExprAssign (ExprReference "a") (ExprAssign (ExprReference "b") (ExprConstant (ConstInt 1))))
     ]
 
 stmtCases =
