@@ -18,6 +18,7 @@ data Expr =
     ExprUnOp !UnOp |
     ExprBinOp !BinOp |
     ExprRelOp !RelOp |
+    ExprAssign !Expr !Expr |
     ExprIndexAccess !Text !Expr |
     ExprConstant !Constant |
     ExprReference !Text |
@@ -68,9 +69,11 @@ data Constant =
     ConstDouble !Double
     deriving (Show, Eq)
 
+type DeclOrExpr = Either Parameter Expr
+
 data Statement =
     StatementIf !Expr ![Statement] |
-    StatementFor !Expr !Expr !Expr ![Statement] |
+    StatementFor !DeclOrExpr !Expr !Expr ![Statement] |
     StatementWhile !Expr ![Statement] |
     StatementExpr !Expr |
     StatementDecl !Parameter |

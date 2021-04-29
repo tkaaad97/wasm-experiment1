@@ -15,7 +15,7 @@ import Data.Word (Word64)
 import SampleLang.Ast.Parsed
 import Text.Megaparsec ((<|>))
 import qualified Text.Megaparsec as Parser (Parsec, between, choice, many,
-                                            satisfy, try)
+                                            option, satisfy, try)
 import qualified Text.Megaparsec.Char as Char (alphaNumChar, space)
 import qualified Text.Megaparsec.Char.Lexer as Lexer (decimal, float, lexeme,
                                                       symbol)
@@ -125,9 +125,9 @@ expr =
 
 assignment :: Parser Expr
 assignment =
-    Lexer.lexeme Char.space $
-    -- todo
-    equality
+    Lexer.lexeme Char.space $ do
+        a <- equality
+        Parser.option a (symbol "=" *> (ExprAssign a <$> equality))
 
 equality :: Parser Expr
 equality =
@@ -183,7 +183,7 @@ statement :: Parser Statement
 statement =
     Lexer.lexeme Char.space $
     Parser.try ifStatement <|>
---    forStatement <|>
+    Parser.try forStatement <|>
 --    whileStatement <|>
     Parser.try declarationStatement <|>
     Parser.try exprStatement <|>
@@ -194,6 +194,17 @@ statement =
         cond <- parens expr
         body <- braces (Parser.many statement)
         return (StatementIf cond body)
+    forStatement = do
+        symbol "for"
+        symbol "("
+        pre <- (Left <$> Parser.try declaration) <|> (Right <$> expr)
+        symbol ";"
+        cond <- expr
+        symbol ";"
+        post <- expr
+        symbol ")"
+        body <- braces (Parser.many statement)
+        return (StatementFor pre cond post body)
     declarationStatement =
         StatementDecl <$> declaration <* symbol ";"
     exprStatement =
