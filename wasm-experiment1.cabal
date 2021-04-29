@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f58f758cbc78a05ddb182bf73d6112b153f60cd8ec91e641f90b3c3902fcab9f
+-- hash: 249efe201bcc0dc966f0bbe2349fc94010a71732ba7b6993d0061a1beec5f543
 
 name:           wasm-experiment1
 version:        0.1.0.0
@@ -21,6 +21,7 @@ library
       SampleLang.Ast.Types
       SampleLang.CodeGen.Wasm
       SampleLang.Parser
+      SampleLang.Resolve
       Wasm
       Wasm.TextPrinter
       Wasm.Types

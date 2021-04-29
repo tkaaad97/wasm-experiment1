@@ -3,6 +3,8 @@ module SampleLang.Ast.Parsed
     , FunctionType(..)
     , Parameter(..)
     , Constant(..)
+    , Ast(..)
+    , DeclOrFuncDef(..)
     , Expr(..)
     , UnOp(..)
     , BinOp(..)
@@ -13,6 +15,14 @@ module SampleLang.Ast.Parsed
 
 import Data.Text (Text)
 import SampleLang.Ast.Types
+
+newtype Ast = Ast [DeclOrFuncDef]
+    deriving (Show, Eq)
+
+data DeclOrFuncDef =
+    Decl !Parameter |
+    FuncDef !FunctionDefinition
+    deriving (Show, Eq)
 
 data Expr =
     ExprUnOp !UnOp |
