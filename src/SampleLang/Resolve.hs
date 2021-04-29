@@ -38,6 +38,34 @@ resolveLValue gvarMap lvarMap (P.ExprReference name) = do
     maybe (Left $ "not found: " ++ Text.unpack name) return (maybeLocal `mplus` maybeGlobal)
 resolveLValue gvarMap lvarMap e = Left $ "not LValue: " ++ show e
 
+resolveStatement :: Map Text FunctionIdx -> Map Text GlobalVarIdx -> Map Text LocalVarIdx -> P.Statement -> Either String R.Statement
+resolveStatement funcMap gvarMap lvarMap (P.StatementIf cond body) =
+    R.StatementIf <$>
+        resolveExpr funcMap gvarMap lvarMap cond <*>
+        (Vector.fromList <$> mapM (resolveStatement funcMap gvarMap lvarMap) body)
+resolveStatement funcMap gvarMap lvarMap (P.StatementFor (Left pre) cond post body) =
+    R.StatementFor (Left pre) <$>
+        resolveExpr funcMap gvarMap lvarMap cond <*>
+        resolveExpr funcMap gvarMap lvarMap post <*>
+        (Vector.fromList <$> mapM (resolveStatement funcMap gvarMap lvarMap) body)
+resolveStatement funcMap gvarMap lvarMap (P.StatementFor (Right pre) cond post body) =
+    R.StatementFor <$>
+        (Right <$> resolveExpr funcMap gvarMap lvarMap pre) <*>
+        resolveExpr funcMap gvarMap lvarMap cond <*>
+        resolveExpr funcMap gvarMap lvarMap post <*>
+        (Vector.fromList <$> mapM (resolveStatement funcMap gvarMap lvarMap) body)
+resolveStatement funcMap gvarMap lvarMap (P.StatementWhile cond body) =
+    R.StatementWhile <$>
+        resolveExpr funcMap gvarMap lvarMap cond <*>
+        (Vector.fromList <$> mapM (resolveStatement funcMap gvarMap lvarMap) body)
+resolveStatement funcMap gvarMap lvarMap (P.StatementExpr e) =
+    R.StatementExpr <$>
+        resolveExpr funcMap gvarMap lvarMap e
+resolveStatement funcMap gvarMap lvarMap (P.StatementDecl a) =
+    return (R.StatementDecl a)
+resolveStatement funcMap gvarMap lvarMap (P.StatementReturn e) =
+    R.StatementReturn <$> resolveExpr funcMap gvarMap lvarMap e
+
 pickFunctionDefinitions :: P.Ast -> [P.FunctionDefinition]
 pickFunctionDefinitions (P.Ast xs) = mapMaybe isFuncDef xs
     where
