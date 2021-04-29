@@ -131,11 +131,9 @@ assignment =
 
 equality :: Parser Expr
 equality =
-    Lexer.lexeme Char.space $
-    Parser.try equ <|> relational
-    where
-    equ = do
-        a <- relational
+    Lexer.lexeme Char.space $ do
+    a <- relational
+    Parser.option a $ do
         op <- Parser.choice
             [ symbol "==" $> Equ
             , symbol "/=" $> Neq]
@@ -144,18 +142,16 @@ equality =
 
 relational :: Parser Expr
 relational =
-    Lexer.lexeme Char.space $
-    Parser.try rel <|> addSub
-    where
-    rel = do
+    Lexer.lexeme Char.space $ do
         a <- addSub
-        op <- Parser.choice
-            [ symbol "<" $> Lt
-            , symbol "<=" $> Le
-            , symbol ">" $> Gt
-            , symbol ">=" $> Ge]
-        b <- addSub
-        return (ExprRelOp (op a b))
+        Parser.option a $ do
+            op <- Parser.choice
+                [ symbol "<" $> Lt
+                , symbol "<=" $> Le
+                , symbol ">" $> Gt
+                , symbol ">=" $> Ge]
+            b <- addSub
+            return (ExprRelOp (op a b))
 
 primitiveType :: Parser Type'
 primitiveType =
