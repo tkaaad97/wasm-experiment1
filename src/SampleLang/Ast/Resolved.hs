@@ -2,7 +2,6 @@ module SampleLang.Ast.Resolved
     ( Expr(..)
     , UnOp(..)
     , BinOp(..)
-    , RelOp(..)
     , LValue(..)
     , Statement(..)
     , Function(..)
@@ -13,37 +12,13 @@ import Data.Vector (Vector)
 import SampleLang.Ast.Types
 
 data Expr =
-    ExprUnOp !Type' !UnOp |
-    ExprBinOp !Type' !BinOp |
-    ExprRelOp !Type' !RelOp |
-    ExprAssign !Type' !LValue !Expr |
-    ExprIndexAccess !Type' !LValue !Expr |
-    ExprConstant !Type' !Constant |
-    ExprReference !Type' !LValue |
-    ExprFunctionCall !Type' !FunctionIdx !(Vector Expr)
-    deriving (Show, Eq)
-
-data UnOp =
-    Negate !Expr |
-    Not !Expr |
-    Increment !Expr |
-    Decrement !Expr
-    deriving (Show, Eq)
-
-data BinOp =
-    Add !Expr !Expr |
-    Sub !Expr !Expr |
-    Mul !Expr !Expr |
-    Div !Expr !Expr
-    deriving (Show, Eq)
-
-data RelOp =
-    Equ !Expr !Expr |
-    Neq !Expr !Expr |
-    Lt !Expr !Expr |
-    Le !Expr !Expr |
-    Gt !Expr !Expr |
-    Ge !Expr !Expr
+    ExprUnary !UnOp !Expr !Expr |
+    ExprBinary !BinOp |
+    ExprAssign !LValue !Expr |
+    ExprIndexAccess !LValue !Expr |
+    ExprConstant !Constant |
+    ExprReference !LValue |
+    ExprFunctionCall !FunctionIdx !(Vector Expr)
     deriving (Show, Eq)
 
 data LValue =

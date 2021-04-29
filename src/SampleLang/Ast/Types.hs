@@ -1,5 +1,7 @@
 module SampleLang.Ast.Types
     ( Type'(..)
+    , UnOp(..)
+    , BinOp(..)
     , FunctionType(..)
     , Parameter(..)
     , Constant(..)
@@ -20,6 +22,26 @@ data Type' =
     TypeDouble |
     TypeArray !Int !Type' |
     TypeFunction !FunctionType
+    deriving (Show, Eq)
+
+data UnOp =
+    Negate |
+    Not |
+    Increment |
+    Decrement
+    deriving (Show, Eq)
+
+data BinOp =
+    Add |
+    Sub |
+    Mul |
+    Div |
+    Equ |
+    Neq |
+    Lt |
+    Le |
+    Gt |
+    Ge
     deriving (Show, Eq)
 
 data FunctionType = FunctionType ![Parameter] !Type'

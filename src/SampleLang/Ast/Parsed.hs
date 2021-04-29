@@ -8,7 +8,6 @@ module SampleLang.Ast.Parsed
     , Expr(..)
     , UnOp(..)
     , BinOp(..)
-    , RelOp(..)
     , Statement(..)
     , FunctionDefinition(..)
     ) where
@@ -25,37 +24,13 @@ data DeclOrFuncDef =
     deriving (Show, Eq)
 
 data Expr =
-    ExprUnOp !UnOp |
-    ExprBinOp !BinOp |
-    ExprRelOp !RelOp |
+    ExprUnary !UnOp !Expr |
+    ExprBinary !BinOp !Expr !Expr |
     ExprAssign !Expr !Expr |
-    ExprIndexAccess !Text !Expr |
+    ExprIndexAccess !Expr !Expr |
     ExprConstant !Constant |
     ExprReference !Text |
-    ExprFunctionCall !Text
-    deriving (Show, Eq)
-
-data UnOp =
-    Negate !Expr |
-    Not !Expr |
-    Increment !Expr |
-    Decrement !Expr
-    deriving (Show, Eq)
-
-data BinOp =
-    Add !Expr !Expr |
-    Sub !Expr !Expr |
-    Mul !Expr !Expr |
-    Div !Expr !Expr
-    deriving (Show, Eq)
-
-data RelOp =
-    Equ !Expr !Expr |
-    Neq !Expr !Expr |
-    Lt !Expr !Expr |
-    Le !Expr !Expr |
-    Gt !Expr !Expr |
-    Ge !Expr !Expr
+    ExprFunctionCall !Text ![Expr]
     deriving (Show, Eq)
 
 type DeclOrExpr = Either Parameter Expr

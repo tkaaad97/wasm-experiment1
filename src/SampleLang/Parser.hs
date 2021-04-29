@@ -33,31 +33,31 @@ addSub :: Parser Expr
 addSub = Lexer.lexeme Char.space $ do
     e <- mulDiv
     xs <- Parser.many $ Parser.choice [add, sub]
-    return $ foldl' (\a f -> ExprBinOp (f a)) e xs
+    return $ foldl' (\a (op, b) -> ExprBinary op a b) e xs
     where
     add = do
         symbol "+"
         e <- mulDiv
-        return (`Add` e)
+        return (Add, e)
     sub = do
         symbol "-"
         e <- mulDiv
-        return (`Sub` e)
+        return (Sub, e)
 
 mulDiv :: Parser Expr
 mulDiv = Lexer.lexeme Char.space $ do
     e <- unary
     xs <- Parser.many $ Parser.choice [mul, div_]
-    return $ foldl' (\a f -> ExprBinOp (f a)) e xs
+    return $ foldl' (\a (op, b) -> ExprBinary op a b) e xs
     where
     mul = do
         symbol "*"
         e <- unary
-        return (`Mul` e)
+        return (Mul, e)
     div_ = do
         symbol "/"
         e <- unary
-        return (`Div` e)
+        return (Div, e)
 
 unary :: Parser Expr
 unary =
@@ -68,10 +68,10 @@ unary =
     Parser.try decrement <|>
     postfix
     where
-    negate = symbol "-" *> (ExprUnOp . Negate <$> expr)
-    not = symbol "!" *> (ExprUnOp . Not <$> expr)
-    increment = symbol "++" *> (ExprUnOp . Increment <$> expr)
-    decrement = symbol "--" *> (ExprUnOp . Decrement <$> expr)
+    negate = symbol "-" *> (ExprUnary Negate <$> expr)
+    not = symbol "!" *> (ExprUnary Not <$> expr)
+    increment = symbol "++" *> (ExprUnary Increment <$> expr)
+    decrement = symbol "--" *> (ExprUnary Decrement <$> expr)
 
 postfix :: Parser Expr
 postfix =
@@ -138,7 +138,7 @@ equality =
             [ symbol "==" $> Equ
             , symbol "/=" $> Neq]
         b <- relational
-        return (ExprRelOp (op a b))
+        return (ExprBinary op a b)
 
 relational :: Parser Expr
 relational =
@@ -151,7 +151,7 @@ relational =
                 , symbol ">" $> Gt
                 , symbol ">=" $> Ge]
             b <- addSub
-            return (ExprRelOp (op a b))
+            return (ExprBinary op a b)
 
 primitiveType :: Parser Type'
 primitiveType =
