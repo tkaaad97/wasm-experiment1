@@ -12,18 +12,13 @@ import Data.Vector (Vector)
 import SampleLang.Ast.Types
 
 data Expr =
-    ExprUnary !UnOp !Expr !Expr |
-    ExprBinary !BinOp |
+    ExprUnary !UnOp !Expr |
+    ExprBinary !BinOp !Expr !Expr |
     ExprAssign !LValue !Expr |
     ExprIndexAccess !LValue !Expr |
     ExprConstant !Constant |
     ExprReference !LValue |
     ExprFunctionCall !FunctionIdx !(Vector Expr)
-    deriving (Show, Eq)
-
-data LValue =
-    LocalVar !LocalVarIdx |
-    GlobalVar !GlobalVarIdx
     deriving (Show, Eq)
 
 type DeclOrExpr = Either Parameter Expr

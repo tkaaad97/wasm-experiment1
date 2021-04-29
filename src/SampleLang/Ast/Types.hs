@@ -10,6 +10,7 @@ module SampleLang.Ast.Types
     , LocalVarIdx(..)
     , GlobalVar(..)
     , LocalVar(..)
+    , LValue(..)
     ) where
 
 import Data.Text (Text)
@@ -72,4 +73,9 @@ data GlobalVar = GlobalVar !Text !Type'
     deriving (Show, Eq)
 
 data LocalVar = LocalVar !Text !Type'
+    deriving (Show, Eq)
+
+data LValue =
+    LValueLocal !LocalVarIdx |
+    LValueGlobal !GlobalVarIdx
     deriving (Show, Eq)
