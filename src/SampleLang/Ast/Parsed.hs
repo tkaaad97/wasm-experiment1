@@ -3,9 +3,9 @@ module SampleLang.Ast.Parsed
     , Type'(..)
     , FunctionType(..)
     , Parameter(..)
-    , Unary(..)
-    , Binary(..)
-    , Relation(..)
+    , UnOp(..)
+    , BinOp(..)
+    , RelOp(..)
     , Constant(..)
     , Statement(..)
     , FunctionDefinition(..)
@@ -15,9 +15,9 @@ import Data.Text (Text)
 import Data.Word (Word64)
 
 data Expr =
-    ExprUnary !Unary |
-    ExprBinary !Binary |
-    ExprRelational !Relation |
+    ExprUnOp !UnOp |
+    ExprBinOp !BinOp |
+    ExprRelOp !RelOp |
     ExprIndexAccess !Text !Expr |
     ExprConstant !Constant |
     ExprReference !Text |
@@ -39,21 +39,21 @@ data FunctionType = FunctionType ![Parameter] !Type'
 data Parameter = Parameter !Text !Type'
     deriving (Show, Eq)
 
-data Unary =
+data UnOp =
     Negate !Expr |
     Not !Expr |
     Increment !Expr |
     Decrement !Expr
     deriving (Show, Eq)
 
-data Binary =
+data BinOp =
     Add !Expr !Expr |
     Sub !Expr !Expr |
     Mul !Expr !Expr |
     Div !Expr !Expr
     deriving (Show, Eq)
 
-data Relation =
+data RelOp =
     Equ !Expr !Expr |
     Neq !Expr !Expr |
     Lt !Expr !Expr |

@@ -23,14 +23,14 @@ spec = do
 
 exprCases =
     [ ("constant int", "123", Right $ ExprConstant (ConstInt 123))
-    , ("negate constant int", "- 123", Right $ ExprUnary (Negate (ExprConstant (ConstInt 123))))
+    , ("negate constant int", "- 123", Right $ ExprUnOp (Negate (ExprConstant (ConstInt 123))))
     , ("reference", "aaa", Right $ ExprReference "aaa")
-    , ("add nums", "1+2", Right $ ExprBinary (Add (ExprConstant (ConstInt 1)) (ExprConstant (ConstInt 2))))
-    , ("add and mul", "1+2*3", Right $ ExprBinary (Add (ExprConstant (ConstInt 1)) (ExprBinary (Mul (ExprConstant (ConstInt 2)) (ExprConstant (ConstInt 3))))))
+    , ("add nums", "1+2", Right $ ExprBinOp (Add (ExprConstant (ConstInt 1)) (ExprConstant (ConstInt 2))))
+    , ("add and mul", "1+2*3", Right $ ExprBinOp (Add (ExprConstant (ConstInt 1)) (ExprBinOp (Mul (ExprConstant (ConstInt 2)) (ExprConstant (ConstInt 3))))))
     ]
 
 stmtCases =
     [ ("int declaration", "int a;", Right $ StatementDecl (Parameter "a" TypeInt))
     , ("if statement", "if (true) { }", Right $ StatementIf (ExprConstant (ConstBool True)) [])
-    , ("expr statement", "a == b;", Right $ StatementExpr (ExprRelational (Equ (ExprReference "a") (ExprReference "b"))))
+    , ("expr statement", "a == b;", Right $ StatementExpr (ExprRelOp (Equ (ExprReference "a") (ExprReference "b"))))
     ]

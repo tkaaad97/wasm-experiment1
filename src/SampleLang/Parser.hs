@@ -33,7 +33,7 @@ addSub :: Parser Expr
 addSub = Lexer.lexeme Char.space $ do
     e <- mulDiv
     xs <- Parser.many $ Parser.choice [add, sub]
-    return $ foldl' (\a f -> ExprBinary (f a)) e xs
+    return $ foldl' (\a f -> ExprBinOp (f a)) e xs
     where
     add = do
         symbol "+"
@@ -48,7 +48,7 @@ mulDiv :: Parser Expr
 mulDiv = Lexer.lexeme Char.space $ do
     e <- unary
     xs <- Parser.many $ Parser.choice [mul, div_]
-    return $ foldl' (\a f -> ExprBinary (f a)) e xs
+    return $ foldl' (\a f -> ExprBinOp (f a)) e xs
     where
     mul = do
         symbol "*"
@@ -68,10 +68,10 @@ unary =
     Parser.try decrement <|>
     postfix
     where
-    negate = symbol "-" *> (ExprUnary . Negate <$> expr)
-    not = symbol "!" *> (ExprUnary . Not <$> expr)
-    increment = symbol "++" *> (ExprUnary . Increment <$> expr)
-    decrement = symbol "--" *> (ExprUnary . Decrement <$> expr)
+    negate = symbol "-" *> (ExprUnOp . Negate <$> expr)
+    not = symbol "!" *> (ExprUnOp . Not <$> expr)
+    increment = symbol "++" *> (ExprUnOp . Increment <$> expr)
+    decrement = symbol "--" *> (ExprUnOp . Decrement <$> expr)
 
 postfix :: Parser Expr
 postfix =
@@ -140,7 +140,7 @@ equality =
             [ symbol "==" $> Equ
             , symbol "/=" $> Neq]
         b <- relational
-        return (ExprRelational (op a b))
+        return (ExprRelOp (op a b))
 
 relational :: Parser Expr
 relational =
@@ -155,7 +155,7 @@ relational =
             , symbol ">" $> Gt
             , symbol ">=" $> Ge]
         b <- addSub
-        return (ExprRelational (op a b))
+        return (ExprRelOp (op a b))
 
 primitiveType :: Parser Type'
 primitiveType =
