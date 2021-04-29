@@ -3,7 +3,6 @@ module SampleLang.ParserSpec
     ( spec
     ) where
 
-import Data.Text (Text)
 import SampleLang.Ast.Parsed
 import SampleLang.Parser as Parser
 import Test.Hspec

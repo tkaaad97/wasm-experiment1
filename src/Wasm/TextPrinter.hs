@@ -107,6 +107,7 @@ buildFunc (FuncType (ResultType params) (ResultType results)) funcidx (Func type
     , buildIndex funcidx
     , mconcat ["(type ", Builder.decimal typeidx, ")"]
     , buildParam params
+    -- todo locals
     , buildResult results
     , buildFuncBody body
     ]

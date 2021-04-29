@@ -11,7 +11,12 @@ module Wasmtime.Raw
     , wasmEngineNew
     , wasmExternAsFunc
     , wasmExternVecDelete
+    , wasmFuncNew
+    , wasmFuncTypeNew
+    , wasmInstanceDelete
     , wasmInstanceExports
+    , wasmModuleDelete
+    , wasmStoreDelete
     , wasmStoreNew
     , wasmTrapDelete
     , wasmTrapMessage
@@ -26,6 +31,7 @@ module Wasmtime.Raw
     , wasmtimeFuncCall
     , wasmtimeInstanceNew
     , wasmtimeModuleNew
+    , wasmtimeWat2Wasm
     ) where
 
 import Control.Exception (throwIO)

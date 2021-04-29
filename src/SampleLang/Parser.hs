@@ -16,7 +16,7 @@ import SampleLang.Ast.Parsed
 import Text.Megaparsec ((<|>))
 import qualified Text.Megaparsec as Parser (Parsec, between, choice, many,
                                             option, satisfy, try)
-import qualified Text.Megaparsec.Char as Char (alphaNumChar, space)
+import qualified Text.Megaparsec.Char as Char (space)
 import qualified Text.Megaparsec.Char.Lexer as Lexer (decimal, float, lexeme,
                                                       symbol)
 
@@ -62,14 +62,14 @@ mulDiv = Lexer.lexeme Char.space $ do
 unary :: Parser Expr
 unary =
     Lexer.lexeme Char.space $
-    Parser.try negate <|>
-    Parser.try not <|>
+    Parser.try negate_ <|>
+    Parser.try not_ <|>
     Parser.try increment <|>
     Parser.try decrement <|>
     postfix
     where
-    negate = symbol "-" *> (ExprUnary Negate <$> expr)
-    not = symbol "!" *> (ExprUnary Not <$> expr)
+    negate_ = symbol "-" *> (ExprUnary Negate <$> expr)
+    not_ = symbol "!" *> (ExprUnary Not <$> expr)
     increment = symbol "++" *> (ExprUnary Increment <$> expr)
     decrement = symbol "--" *> (ExprUnary Decrement <$> expr)
 
