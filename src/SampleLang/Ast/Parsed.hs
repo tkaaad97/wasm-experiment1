@@ -1,18 +1,18 @@
 module SampleLang.Ast.Parsed
-    ( Expr(..)
-    , Type'(..)
+    ( Type'(..)
     , FunctionType(..)
     , Parameter(..)
+    , Constant(..)
+    , Expr(..)
     , UnOp(..)
     , BinOp(..)
     , RelOp(..)
-    , Constant(..)
     , Statement(..)
     , FunctionDefinition(..)
     ) where
 
 import Data.Text (Text)
-import Data.Word (Word64)
+import SampleLang.Ast.Types
 
 data Expr =
     ExprUnOp !UnOp |
@@ -23,21 +23,6 @@ data Expr =
     ExprConstant !Constant |
     ExprReference !Text |
     ExprFunctionCall !Text
-    deriving (Show, Eq)
-
-data Type' =
-    TypeUInt |
-    TypeInt |
-    TypeBool |
-    TypeDouble |
-    TypeArray !Int !Type' |
-    TypeFunction !FunctionType
-    deriving (Show, Eq)
-
-data FunctionType = FunctionType ![Parameter] !Type'
-    deriving (Show, Eq)
-
-data Parameter = Parameter !Text !Type'
     deriving (Show, Eq)
 
 data UnOp =
@@ -61,12 +46,6 @@ data RelOp =
     Le !Expr !Expr |
     Gt !Expr !Expr |
     Ge !Expr !Expr
-    deriving (Show, Eq)
-
-data Constant =
-    ConstInt !Word64 |
-    ConstBool !Bool |
-    ConstDouble !Double
     deriving (Show, Eq)
 
 type DeclOrExpr = Either Parameter Expr
