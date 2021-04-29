@@ -1,4 +1,4 @@
-module SampleLang.Ast
+module SampleLang.Ast.Parsed
     ( Expr(..)
     , Type'(..)
     , FunctionType(..)

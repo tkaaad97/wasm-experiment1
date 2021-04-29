@@ -12,7 +12,7 @@ import Data.Functor (($>))
 import Data.Text (Text)
 import qualified Data.Text as Text (pack)
 import Data.Word (Word64)
-import SampleLang.Ast
+import SampleLang.Ast.Parsed
 import Text.Megaparsec ((<|>))
 import qualified Text.Megaparsec as Parser (Parsec, between, choice, many,
                                             satisfy, try)

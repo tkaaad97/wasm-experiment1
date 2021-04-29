@@ -4,7 +4,7 @@ module SampleLang.ParserSpec
     ) where
 
 import Data.Text (Text)
-import SampleLang.Ast
+import SampleLang.Ast.Parsed
 import SampleLang.Parser as Parser
 import Test.Hspec
 import qualified Text.Megaparsec as Parser (parse)
