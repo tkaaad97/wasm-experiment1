@@ -2,17 +2,42 @@ module SampleLang.Resolve
     (
     ) where
 
-import Control.Monad (mplus)
+import Control.Monad (mplus, unless)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (lookup)
+import qualified Data.Map.Strict as Map (fromList, lookup, size)
 import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as Text (unpack)
 import Data.Vector (Vector)
-import qualified Data.Vector as Vector (fromList)
+import qualified Data.Vector as Vector (fromList, imap, length, map, mapM,
+                                        toList)
 import qualified SampleLang.Ast.Parsed as P
 import qualified SampleLang.Ast.Resolved as R
 import SampleLang.Ast.Types
+
+resolve :: P.Ast -> Either String R.Program
+resolve ast = do
+    let gvars = pickGlobalVars ast
+        gvarVec = Vector.fromList gvars
+        gvarMap = Map.fromList . Vector.toList . Vector.imap (\i (GlobalVar name _) -> (name, GlobalVarIdx i)) $ gvarVec
+    unless (Map.size gvarMap == Vector.length gvarVec) $ Left "global variable name duplication"
+
+    let funcs = pickFunctionDefinitions ast
+        funcVec = Vector.fromList funcs
+        funcMap = Map.fromList . Vector.toList . Vector.imap (\i (P.FunctionDefinition name _ _) -> (name, FunctionIdx i)) $ funcVec
+    unless (Map.size funcMap == Vector.length funcVec) $ Left "function name duplication"
+
+    resolvedFuncVec <- Vector.mapM (resolveFunction funcMap gvarMap) funcVec
+    return (R.Program resolvedFuncVec gvarVec)
+
+resolveFunction :: Map Text FunctionIdx -> Map Text GlobalVarIdx -> P.FunctionDefinition -> Either String R.Function
+resolveFunction funcMap gvarMap funcDef = do
+    body' <- Vector.fromList <$> mapM (resolveStatement funcMap gvarMap lvarMap) body
+    return (R.Function name funcType localVarVec body')
+    where
+    P.FunctionDefinition name funcType body = funcDef
+    localVarVec = pickLocalVars funcDef
+    lvarMap = Map.fromList . Vector.toList . Vector.imap (\i (LocalVar name _) -> (name, LocalVarIdx i)) $ localVarVec
 
 resolveExpr :: Map Text FunctionIdx -> Map Text GlobalVarIdx -> Map Text LocalVarIdx -> P.Expr -> Either String R.Expr
 resolveExpr funcMap gvarMap lvarMap (P.ExprUnary op a) =

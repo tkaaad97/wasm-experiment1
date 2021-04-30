@@ -5,6 +5,7 @@ module SampleLang.Ast.Resolved
     , LValue(..)
     , Statement(..)
     , Function(..)
+    , Program(..)
     ) where
 
 import Data.Text (Text)
@@ -37,4 +38,9 @@ data Function = Function
     , functionType   :: !FunctionType
     , functionLocals :: !(Vector LocalVar)
     , functionBody   :: !(Vector Statement)
+    } deriving (Show, Eq)
+
+data Program = Program
+    { programFunctions  :: !(Vector Function)
+    , programGlobalVars :: !(Vector GlobalVar)
     } deriving (Show, Eq)

@@ -61,7 +61,7 @@ newtype FunctionIdx = FunctionIdx
     { unFunctionIdx :: Int
     } deriving (Show, Eq)
 
-newtype GlobalVarIdx = GVarIdx
+newtype GlobalVarIdx = GlobalVarIdx
     { unGVarIdx :: Int
     } deriving (Show, Eq)
 
