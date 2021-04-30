@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 93d76fcc024f5f23618668b17d4708f1c5662d2cfb5caf0776b5a471ec913c9a
+-- hash: 25d9dd830bfbfcb468165ba9cc5bc1ded7b1e204d9078d81cfebf8da078cb9f9
 
 name:           wasm-experiment1
 version:        0.1.0.0
@@ -64,6 +64,7 @@ test-suite wasm-experiment1-test
   main-is: Spec.hs
   other-modules:
       SampleLang.ParserSpec
+      SampleLang.ResolveSpec
       Wasm.TextPrinterSpec
       Paths_wasm_experiment1
   hs-source-dirs:

@@ -1,5 +1,9 @@
 module SampleLang.Resolve
-    (
+    ( resolve
+    , resolveFunction
+    , resolveExpr
+    , resolveStatement
+    , resolveLValue
     ) where
 
 import Control.Monad (mplus, unless)
