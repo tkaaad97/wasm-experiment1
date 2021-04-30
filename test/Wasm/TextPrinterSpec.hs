@@ -20,8 +20,8 @@ modules =
       ),
       ( "module1"
       , Module
-        (Vector.singleton (FuncType (ResultType [NumType I32, NumType I32]) (ResultType [NumType I32])))
-        (Vector.singleton (Func 0 [] [LocalGet 0, LocalGet 1, I32Binary IAdd]))
+        (Vector.singleton (FuncType (ResultType $ Vector.fromList [NumType I32, NumType I32]) (ResultType $ Vector.fromList [NumType I32])))
+        (Vector.singleton (Func 0 mempty $ Vector.fromList [LocalGet 0, LocalGet 1, I32Binary IAdd]))
         (Vector.singleton (Export "add" (ExportFunc 0)))
       )
     ]

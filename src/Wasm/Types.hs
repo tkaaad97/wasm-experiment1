@@ -25,11 +25,11 @@ import Data.Word (Word32, Word64)
 data Module = Module
     { moduleTypes   :: !(Vector FuncType)
     , moduleFuncs   :: !(Vector Func)
-    --, moduleGlobals  :: ![Global]
-    --, moduleTables   :: ![Table]
-    --, moduleMemories :: ![Memory]
-    --, moduleDatas    :: ![DataSegment]
-    --, moduleImports  :: ![Import]
+    --, moduleGlobals :: !(Vector Global)
+    --, moduleTables   :: !(Vector Table)
+    --, moduleMemories :: !(Vector Memory)
+    --, moduleDatas    :: !(Vector DataSegment)
+    --, moduleImports  :: !(Vector Import)
     , moduleExports :: !(Vector Export)
     } deriving (Show, Eq)
 
@@ -50,7 +50,7 @@ data ValType =
     RefType !RefType
     deriving (Show, Eq)
 
-newtype ResultType = ResultType [ValType]
+newtype ResultType = ResultType (Vector ValType)
     deriving (Show, Eq)
 
 data FuncType = FuncType !ResultType !ResultType
@@ -58,8 +58,8 @@ data FuncType = FuncType !ResultType !ResultType
 
 data Func = Func
     { funcType   :: !Word32
-    , funcLocals :: ![ValType]
-    , funcBody   :: ![Instr]
+    , funcLocals :: !(Vector ValType)
+    , funcBody   :: !(Vector Instr)
     } deriving (Show, Eq)
 
 data IUnop =

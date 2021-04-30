@@ -47,42 +47,29 @@ buildType typeidx (FuncType (ResultType params) (ResultType results)) =
     <>
     ")"
 
-buildFuncType :: [ValType] -> [ValType] -> Builder
-buildFuncType [] [] = "(func)"
-buildFuncType params [] =
-    intercalateBuilder " "
-    [ "(func"
-    , buildParam params
-    ]
-    <>
-    ")"
-buildFuncType [] results =
-    intercalateBuilder " "
-    [ "(func"
-    , buildResult results
-    ]
-    <>
-    ")"
+buildFuncType :: Vector ValType -> Vector ValType -> Builder
 buildFuncType params results =
     intercalateBuilder " "
-    [ "(func"
-    , buildParam params
-    , buildResult results
-    ]
-    <>
-    ")"
+        ( "(func" :
+          [ buildParam params | not (null params)] ++
+          [ buildResult results | not (null results) ]
+        )
+    <> ")"
 
-buildParam :: [ValType] -> Builder
+buildParam :: Vector ValType -> Builder
 buildParam params =
-    intercalateBuilder " " (["(param"] <> map buildValType params)
-    <>
-    ")"
+    intercalateBuilder " " ("(param" : map buildValType (Vector.toList params))
+    <> ")"
 
-buildResult :: [ValType] -> Builder
+buildLocals :: Vector ValType -> Builder
+buildLocals locals =
+    intercalateBuilder " " ("(local" : map buildValType (Vector.toList locals))
+    <> ")"
+
+buildResult :: Vector ValType -> Builder
 buildResult params =
-    intercalateBuilder " " (["(result"] <> map buildValType params)
-    <>
-    ")"
+    intercalateBuilder " " ("(result" : map buildValType (Vector.toList params))
+    <> ")"
 
 buildValType :: ValType -> Builder
 buildValType (NumType I32)       = "i32"
@@ -103,20 +90,21 @@ buildFuncs types = Vector.toList . Vector.imap f
 buildFunc :: FuncType -> Int -> Func -> Builder
 buildFunc (FuncType (ResultType params) (ResultType results)) funcidx (Func typeidx locals body) =
     intercalateBuilder "\n    "
-    [ "(func"
-    , buildIndex funcidx
-    , mconcat ["(type ", Builder.decimal typeidx, ")"]
-    , buildParam params
-    -- todo locals
-    , buildResult results
-    , buildFuncBody body
-    ]
+        ( "(func" :
+          [ buildIndex funcidx
+          , mconcat ["(type ", Builder.decimal typeidx, ")"]
+          ] ++
+          [ buildParam params | not (null params) ] ++
+          [ buildLocals locals | not (null locals) ] ++
+          [ buildResult results | not (null results) ] ++
+          [ buildFuncBody body ]
+        )
     <>
     "  )"
 
-buildFuncBody :: [Instr] -> Builder
+buildFuncBody :: Vector Instr -> Builder
 buildFuncBody instrs =
-    intercalateBuilder "\n    " (map buildInstr instrs)
+    intercalateBuilder "\n    " (map buildInstr (Vector.toList instrs))
     <>
     "\n"
 
@@ -234,6 +222,7 @@ buildInstr (GlobalSet a)        = "global.set " <> Builder.decimal a
 buildExports :: Vector Export -> [Builder]
 buildExports = Vector.toList . Vector.map buildExport
 
+buildExport :: Export -> Builder
 buildExport (Export name (ExportFunc idx)) = mconcat ["(export \"", Builder.fromText name, "\" (func ", Builder.decimal idx, "))"]
 buildExport (Export name (ExportTable idx)) = mconcat ["(export \"", Builder.fromText name, "\" (table ", Builder.decimal idx, "))"]
 buildExport (Export name (ExportMemory idx)) = mconcat ["(export \"", Builder.fromText name, "\" (mem ", Builder.decimal idx, "))"]
