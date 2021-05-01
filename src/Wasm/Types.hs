@@ -152,11 +152,13 @@ data Instr =
     I64Relation !IRelop |
     F32Relation !FRelop |
     F64Relation !FRelop |
+    RefFunc !Word32 |
     LocalGet !Word32 |
     LocalSet !Word32 |
     LocalTee !Word32 |
     GlobalGet !Word32 |
-    GlobalSet !Word32
+    GlobalSet !Word32 |
+    Call !Word32
     deriving (Show, Eq)
 
 data Export = Export

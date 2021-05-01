@@ -12,6 +12,7 @@ dependencies:
 - megaparsec
 - text
 - vector
+- vector-builder
 
 ghc-options:
   - -Wall

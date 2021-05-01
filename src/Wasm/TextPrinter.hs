@@ -213,11 +213,13 @@ buildInstr (F64Relation Lt)     = "f64.lt"
 buildInstr (F64Relation Gt)     = "f64.gt"
 buildInstr (F64Relation Le)     = "f64.le"
 buildInstr (F64Relation Ge)     = "f64.ge"
+buildInstr (RefFunc a)          = "ref.func " <> Builder.decimal a
 buildInstr (LocalGet a)         = "local.get " <> Builder.decimal a
 buildInstr (LocalSet a)         = "local.set " <> Builder.decimal a
 buildInstr (LocalTee a)         = "local.tee " <> Builder.decimal a
 buildInstr (GlobalGet a)        = "global.get " <> Builder.decimal a
 buildInstr (GlobalSet a)        = "global.set " <> Builder.decimal a
+buildInstr (Call a)             = "call " <> Builder.decimal a
 
 buildExports :: Vector Export -> [Builder]
 buildExports = Vector.toList . Vector.map buildExport

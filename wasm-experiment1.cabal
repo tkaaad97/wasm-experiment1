@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 25d9dd830bfbfcb468165ba9cc5bc1ded7b1e204d9078d81cfebf8da078cb9f9
+-- hash: 72fc9d2d121ee506e8d34a34b3dfd4086c89ed63e867ec095bb7403d4358eeb0
 
 name:           wasm-experiment1
 version:        0.1.0.0
@@ -40,6 +40,7 @@ library
     , megaparsec
     , text
     , vector
+    , vector-builder
   default-language: Haskell2010
 
 executable wasm-experiment1-exe
@@ -56,6 +57,7 @@ executable wasm-experiment1-exe
     , megaparsec
     , text
     , vector
+    , vector-builder
     , wasm-experiment1
   default-language: Haskell2010
 
@@ -80,5 +82,6 @@ test-suite wasm-experiment1-test
     , megaparsec
     , text
     , vector
+    , vector-builder
     , wasm-experiment1
   default-language: Haskell2010
