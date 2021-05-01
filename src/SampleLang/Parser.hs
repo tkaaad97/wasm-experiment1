@@ -9,9 +9,9 @@ import Control.Monad (void)
 import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
 import Data.Foldable (foldl')
 import Data.Functor (($>))
+import Data.Int (Int32)
 import Data.Text (Text)
 import qualified Data.Text as Text (pack)
-import Data.Word (Word64)
 import SampleLang.Ast.Parsed
 import Text.Megaparsec ((<|>))
 import qualified Text.Megaparsec as Parser (Parsec, between, choice, many,
@@ -93,7 +93,7 @@ constant =
     Parser.try (ExprConstant . ConstBool <$> bool) <|>
     (ExprConstant . ConstDouble <$> double)
 
-integer :: Parser Word64
+integer :: Parser Int32
 integer =
     Lexer.lexeme Char.space Lexer.decimal
 
@@ -156,12 +156,10 @@ relational =
 primitiveType :: Parser Type'
 primitiveType =
     Lexer.lexeme Char.space $
-    Parser.try uintType <|>
     Parser.try intType <|>
     Parser.try boolType <|>
     doubleType
     where
-    uintType = symbol "unsigned" >> symbol "int" >> return TypeUInt
     intType = symbol "int" $> TypeInt
     boolType = symbol "bool" $> TypeBool
     doubleType = symbol "double" $> TypeDouble

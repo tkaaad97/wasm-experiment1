@@ -13,13 +13,12 @@ import Data.Vector (Vector)
 import SampleLang.Ast.Types
 
 data Expr =
-    ExprUnary !UnOp !Expr |
-    ExprBinary !BinOp !Expr !Expr |
-    ExprAssign !LValue !Expr |
-    ExprIndexAccess !LValue !Expr |
-    ExprConstant !Constant |
-    ExprReference !LValue |
-    ExprFunctionCall !FunctionIdx !(Vector Expr)
+    ExprUnary !Type' !UnOp !Expr |
+    ExprBinary !Type' !BinOp !Expr !Expr |
+    ExprAssign !Type' !LValue !Expr |
+    ExprConstant !Type' !Constant |
+    ExprReference !Type' !Reference |
+    ExprFunctionCall !Type' !FunctionIdx !(Vector Expr)
     deriving (Show, Eq)
 
 type DeclOrExpr = Either Parameter Expr

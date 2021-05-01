@@ -27,7 +27,6 @@ data Expr =
     ExprUnary !UnOp !Expr |
     ExprBinary !BinOp !Expr !Expr |
     ExprAssign !Expr !Expr |
-    ExprIndexAccess !Expr !Expr |
     ExprConstant !Constant |
     ExprReference !Text |
     ExprFunctionCall !Text ![Expr]

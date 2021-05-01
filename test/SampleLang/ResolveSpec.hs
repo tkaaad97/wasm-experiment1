@@ -16,22 +16,22 @@ spec = do
         it "resolve local variable name" $ do
             let funcMap = mempty
                 gvarMap = mempty
-                lvarMap = Map.fromList [("a", LocalVarIdx 0)]
+                lvarMap = Map.fromList [("a", (LocalVarIdx 0, TypeInt))]
                 e = P.ExprReference "a"
                 result = resolveExpr funcMap gvarMap lvarMap e
-            result `shouldBe` Right (R.ExprReference (LValueLocal (LocalVarIdx 0)))
+            result `shouldBe` Right (R.ExprReference TypeInt (ReferenceLocal (LocalVarIdx 0) TypeInt))
         it "resolve global variable name" $ do
             let funcMap = mempty
-                gvarMap = Map.fromList [("a", GlobalVarIdx 0)]
+                gvarMap = Map.fromList [("a", (GlobalVarIdx 0, TypeInt))]
                 lvarMap = mempty
                 e = P.ExprReference "a"
                 result = resolveExpr funcMap gvarMap lvarMap e
-            result `shouldBe` Right (R.ExprReference (LValueGlobal (GlobalVarIdx 0)))
+            result `shouldBe` Right (R.ExprReference TypeInt (ReferenceGlobal (GlobalVarIdx 0) TypeInt))
         it "priorize local variable" $ do
             let funcMap = mempty
-                gvarMap = Map.fromList [("a", GlobalVarIdx 0)]
-                lvarMap = Map.fromList [("a", LocalVarIdx 0)]
+                gvarMap = Map.fromList [("a", (GlobalVarIdx 0, TypeInt))]
+                lvarMap = Map.fromList [("a", (LocalVarIdx 0, TypeInt))]
                 e = P.ExprReference "a"
                 result = resolveExpr funcMap gvarMap lvarMap e
-            result `shouldBe` Right (R.ExprReference (LValueLocal (LocalVarIdx 0)))
+            result `shouldBe` Right (R.ExprReference TypeInt (ReferenceLocal (LocalVarIdx 0) TypeInt))
 

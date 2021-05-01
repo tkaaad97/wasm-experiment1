@@ -19,55 +19,74 @@ import qualified SampleLang.Ast.Parsed as P
 import qualified SampleLang.Ast.Resolved as R
 import SampleLang.Ast.Types
 
+getExprType :: R.Expr -> Type'
+getExprType (R.ExprUnary type_ _ _)        = type_
+getExprType (R.ExprBinary type_ _ _ _)     = type_
+getExprType (R.ExprAssign type_ _ _)       = type_
+getExprType (R.ExprConstant type_ _)       = type_
+getExprType (R.ExprReference type_ _)      = type_
+getExprType (R.ExprFunctionCall type_ _ _) = type_
+
 resolve :: P.Ast -> Either String R.Program
 resolve ast = do
     let gvars = pickGlobalVars ast
         gvarVec = Vector.fromList gvars
-        gvarMap = Map.fromList . Vector.toList . Vector.imap (\i (GlobalVar name _) -> (name, GlobalVarIdx i)) $ gvarVec
+        gvarMap = Map.fromList . Vector.toList . Vector.imap (\i (GlobalVar name type_) -> (name, (GlobalVarIdx i, type_))) $ gvarVec
     unless (Map.size gvarMap == Vector.length gvarVec) $ Left "global variable name duplication"
 
     let funcs = pickFunctionDefinitions ast
         funcVec = Vector.fromList funcs
-        funcMap = Map.fromList . Vector.toList . Vector.imap (\i (P.FunctionDefinition name _ _) -> (name, FunctionIdx i)) $ funcVec
+        funcMap = Map.fromList . Vector.toList . Vector.imap (\i (P.FunctionDefinition name funcType _) -> (name, (FunctionIdx i, funcType))) $ funcVec
     unless (Map.size funcMap == Vector.length funcVec) $ Left "function name duplication"
 
     resolvedFuncVec <- Vector.mapM (resolveFunction funcMap gvarMap) funcVec
     return (R.Program resolvedFuncVec gvarVec)
 
-resolveFunction :: Map Text FunctionIdx -> Map Text GlobalVarIdx -> P.FunctionDefinition -> Either String R.Function
+resolveFunction :: Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> P.FunctionDefinition -> Either String R.Function
 resolveFunction funcMap gvarMap funcDef = do
     body' <- Vector.fromList <$> mapM (resolveStatement funcMap gvarMap lvarMap) body
     return (R.Function name funcType localVarVec body')
     where
     P.FunctionDefinition name funcType body = funcDef
     localVarVec = pickLocalVars funcDef
-    lvarMap = Map.fromList . Vector.toList . Vector.imap (\i (LocalVar name _) -> (name, LocalVarIdx i)) $ localVarVec
+    lvarMap = Map.fromList . Vector.toList . Vector.imap (\i (LocalVar name type_) -> (name, (LocalVarIdx i, type_))) $ localVarVec
 
-resolveExpr :: Map Text FunctionIdx -> Map Text GlobalVarIdx -> Map Text LocalVarIdx -> P.Expr -> Either String R.Expr
-resolveExpr funcMap gvarMap lvarMap (P.ExprUnary op a) =
-    R.ExprUnary op <$> resolveExpr funcMap gvarMap lvarMap a
-resolveExpr funcMap gvarMap lvarMap (P.ExprBinary op a b) =
-    R.ExprBinary op <$> resolveExpr funcMap gvarMap lvarMap a <*> resolveExpr funcMap gvarMap lvarMap b
-resolveExpr funcMap gvarMap lvarMap (P.ExprAssign a b) =
-    R.ExprAssign <$> resolveLValue gvarMap lvarMap a <*> resolveExpr funcMap gvarMap lvarMap b
-resolveExpr funcMap gvarMap lvarMap (P.ExprIndexAccess a b) =
-    R.ExprIndexAccess <$> resolveLValue gvarMap lvarMap a <*> resolveExpr funcMap gvarMap lvarMap b
-resolveExpr _ _ _ (P.ExprConstant a) = return (R.ExprConstant a)
-resolveExpr _ gvarMap lvarMap (P.ExprReference a) =
-    R.ExprReference <$> resolveLValue gvarMap lvarMap (P.ExprReference a)
+resolveExpr :: Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> Map Text (LocalVarIdx, Type') -> P.Expr -> Either String R.Expr
+resolveExpr funcMap gvarMap lvarMap (P.ExprUnary op a) = do
+    e <- resolveExpr funcMap gvarMap lvarMap a
+    return (R.ExprUnary (getExprType e) op e)
+resolveExpr funcMap gvarMap lvarMap (P.ExprBinary op a b) = do
+    l <- resolveExpr funcMap gvarMap lvarMap a
+    r <- resolveExpr funcMap gvarMap lvarMap b
+    return (R.ExprBinary (getExprType l) op l r)
+resolveExpr funcMap gvarMap lvarMap (P.ExprAssign a b) = do
+    l <- resolveLValue gvarMap lvarMap a
+    r <- resolveExpr funcMap gvarMap lvarMap b
+    return (R.ExprAssign (getLValueType l) l r)
+resolveExpr _ _ _ (P.ExprConstant a) = return (R.ExprConstant (getConstantType a) a)
+resolveExpr funcMap gvarMap lvarMap (P.ExprReference name) = do
+    ref <- resolveReference funcMap gvarMap lvarMap name
+    return (R.ExprReference (getReferenceType ref) ref)
 resolveExpr funcMap gvarMap lvarMap (P.ExprFunctionCall name args) = do
-    funcIdx <- maybe (Left $ "function not found: " ++ Text.unpack name) return $ Map.lookup name funcMap
+    (funcIdx, funcType) <- maybe (Left $ "function not found: " ++ Text.unpack name) return $ Map.lookup name funcMap
     args' <- Vector.fromList <$> mapM (resolveExpr funcMap gvarMap lvarMap) args
-    return (R.ExprFunctionCall funcIdx args')
+    return (R.ExprFunctionCall (getResultType funcType) funcIdx args')
 
-resolveLValue :: Map Text GlobalVarIdx -> Map Text LocalVarIdx -> P.Expr -> Either String LValue
+resolveLValue :: Map Text (GlobalVarIdx, Type') -> Map Text (LocalVarIdx, Type') -> P.Expr -> Either String LValue
 resolveLValue gvarMap lvarMap (P.ExprReference name) = do
-    let maybeLocal = LValueLocal <$> Map.lookup name lvarMap
-        maybeGlobal = LValueGlobal <$> Map.lookup name gvarMap
+    let maybeLocal = uncurry LValueLocal <$> Map.lookup name lvarMap
+        maybeGlobal = uncurry LValueGlobal <$> Map.lookup name gvarMap
     maybe (Left $ "not found: " ++ Text.unpack name) return (maybeLocal `mplus` maybeGlobal)
 resolveLValue _ _ e = Left $ "not LValue: " ++ show e
 
-resolveStatement :: Map Text FunctionIdx -> Map Text GlobalVarIdx -> Map Text LocalVarIdx -> P.Statement -> Either String R.Statement
+resolveReference ::  Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> Map Text (LocalVarIdx, Type') -> Text -> Either String Reference
+resolveReference funcMap gvarMap lvarMap name = do
+    let maybeLocal = uncurry ReferenceLocal <$> Map.lookup name lvarMap
+        maybeGlobal = uncurry ReferenceGlobal <$> Map.lookup name gvarMap
+        maybeFunction = uncurry ReferenceFunction <$> Map.lookup name funcMap
+    maybe (Left $ "not found: " ++ Text.unpack name) return (maybeLocal `mplus` maybeGlobal `mplus` maybeFunction)
+
+resolveStatement :: Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> Map Text (LocalVarIdx, Type') -> P.Statement -> Either String R.Statement
 resolveStatement funcMap gvarMap lvarMap (P.StatementIf cond body) =
     R.StatementIf <$>
         resolveExpr funcMap gvarMap lvarMap cond <*>

@@ -11,13 +11,17 @@ module SampleLang.Ast.Types
     , GlobalVar(..)
     , LocalVar(..)
     , LValue(..)
+    , Reference(..)
+    , getResultType
+    , getLValueType
+    , getReferenceType
+    , getConstantType
     ) where
 
+import Data.Int (Int32)
 import Data.Text (Text)
-import Data.Word (Word64)
 
 data Type' =
-    TypeUInt |
     TypeInt |
     TypeBool |
     TypeDouble |
@@ -51,7 +55,7 @@ data Parameter = Parameter !Text !Type'
     deriving (Show, Eq)
 
 data Constant =
-    ConstInt !Word64 |
+    ConstInt !Int32 |
     ConstBool !Bool |
     ConstDouble !Double
     deriving (Show, Eq)
@@ -75,6 +79,29 @@ data LocalVar = LocalVar !Text !Type'
     deriving (Show, Eq)
 
 data LValue =
-    LValueLocal !LocalVarIdx |
-    LValueGlobal !GlobalVarIdx
+    LValueLocal !LocalVarIdx !Type' |
+    LValueGlobal !GlobalVarIdx !Type'
     deriving (Show, Eq)
+
+data Reference =
+    ReferenceLocal !LocalVarIdx !Type' |
+    ReferenceGlobal !GlobalVarIdx !Type' |
+    ReferenceFunction !FunctionIdx !FunctionType
+    deriving (Show, Eq)
+
+getResultType :: FunctionType -> Type'
+getResultType (FunctionType _ resultType) = resultType
+
+getLValueType :: LValue -> Type'
+getLValueType (LValueLocal _ type_)  = type_
+getLValueType (LValueGlobal _ type_) = type_
+
+getReferenceType :: Reference -> Type'
+getReferenceType (ReferenceLocal _ type_)       = type_
+getReferenceType (ReferenceGlobal _ type_)      = type_
+getReferenceType (ReferenceFunction _ funcType) = TypeFunction funcType
+
+getConstantType :: Constant -> Type'
+getConstantType ConstInt{}    = TypeInt
+getConstantType ConstBool{}   = TypeBool
+getConstantType ConstDouble{} = TypeDouble
