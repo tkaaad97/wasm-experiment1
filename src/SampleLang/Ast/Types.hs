@@ -21,7 +21,6 @@ data Type' =
     TypeInt |
     TypeBool |
     TypeDouble |
-    TypeArray !Int !Type' |
     TypeFunction !FunctionType
     deriving (Show, Eq)
 
