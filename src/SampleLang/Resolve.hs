@@ -54,15 +54,20 @@ resolveFunction funcMap gvarMap funcDef = do
 resolveExpr :: Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> Map Text (LocalVarIdx, Type') -> P.Expr -> Either String R.Expr
 resolveExpr funcMap gvarMap lvarMap (P.ExprUnary op a) = do
     e <- resolveExpr funcMap gvarMap lvarMap a
-    return (R.ExprUnary (getExprType e) op e)
+    type_ <- resolveUnOpType op (getExprType e)
+    return (R.ExprUnary type_ op e)
 resolveExpr funcMap gvarMap lvarMap (P.ExprBinary op a b) = do
     l <- resolveExpr funcMap gvarMap lvarMap a
     r <- resolveExpr funcMap gvarMap lvarMap b
-    return (R.ExprBinary (getExprType l) op l r)
+    type_ <- resolveBinOpType op (getExprType l) (getExprType r)
+    return (R.ExprBinary type_ op l r)
 resolveExpr funcMap gvarMap lvarMap (P.ExprAssign a b) = do
     l <- resolveLValue gvarMap lvarMap a
     r <- resolveExpr funcMap gvarMap lvarMap b
-    return (R.ExprAssign (getLValueType l) l r)
+    let ltype = getLValueType l
+        rtype = getExprType r
+    unless (ltype == rtype) . Left $ "wrong type assignment: " ++ show ltype ++ " = " ++ show rtype
+    return (R.ExprAssign ltype l r)
 resolveExpr _ _ _ (P.ExprConstant a) = return (R.ExprConstant (getConstantType a) a)
 resolveExpr funcMap gvarMap lvarMap (P.ExprReference name) = do
     ref <- resolveReference funcMap gvarMap lvarMap name
@@ -70,7 +75,53 @@ resolveExpr funcMap gvarMap lvarMap (P.ExprReference name) = do
 resolveExpr funcMap gvarMap lvarMap (P.ExprFunctionCall name args) = do
     (funcIdx, funcType) <- maybe (Left $ "function not found: " ++ Text.unpack name) return $ Map.lookup name funcMap
     args' <- Vector.fromList <$> mapM (resolveExpr funcMap gvarMap lvarMap) args
+    -- todo check argments type
     return (R.ExprFunctionCall (getResultType funcType) funcIdx args')
+
+resolveUnOpType :: UnOp -> Type' -> Either String Type'
+resolveUnOpType Negate TypeInt = return TypeInt
+resolveUnOpType Negate TypeDouble = return TypeDouble
+resolveUnOpType Negate a = Left $ "invalid argument type for Negate: " ++ show a
+resolveUnOpType Not TypeBool = return TypeBool
+resolveUnOpType Not a = Left $ "invalid argument type for Not: " ++ show a
+resolveUnOpType Increment TypeInt = return TypeInt
+resolveUnOpType Increment a = Left $ "invalid argument type for Increment: " ++ show a
+resolveUnOpType Decrement TypeInt = return TypeInt
+resolveUnOpType Decrement a = Left $ "invalid argument type for Decrement: " ++ show a
+
+resolveBinOpType :: BinOp -> Type' -> Type' -> Either String Type'
+resolveBinOpType Add TypeInt TypeInt = return TypeInt
+resolveBinOpType Add TypeDouble TypeDouble = return TypeDouble
+resolveBinOpType Add a b = Left $ "invalid argument type for Add: " ++ show a ++ ", " ++ show b
+resolveBinOpType Sub TypeInt TypeInt = return TypeInt
+resolveBinOpType Sub TypeDouble TypeDouble = return TypeDouble
+resolveBinOpType Sub a b = Left $ "invalid argument type for Sub: " ++ show a ++ ", " ++ show b
+resolveBinOpType Mul TypeInt TypeInt = return TypeInt
+resolveBinOpType Mul TypeDouble TypeDouble = return TypeDouble
+resolveBinOpType Mul a b = Left $ "invalid argument type for Mul: " ++ show a ++ ", " ++ show b
+resolveBinOpType Div TypeInt TypeInt = return TypeInt
+resolveBinOpType Div TypeDouble TypeDouble = return TypeDouble
+resolveBinOpType Div a b = Left $ "invalid argument type for Div: " ++ show a ++ ", " ++ show b
+resolveBinOpType Equ TypeInt TypeInt = return TypeBool
+resolveBinOpType Equ TypeBool TypeBool = return TypeBool
+resolveBinOpType Equ TypeDouble TypeDouble = return TypeBool
+resolveBinOpType Equ a b = Left $ "invalid argument type for Equ: " ++ show a ++ ", " ++ show b
+resolveBinOpType Neq TypeInt TypeInt = return TypeBool
+resolveBinOpType Neq TypeBool TypeBool = return TypeBool
+resolveBinOpType Neq TypeDouble TypeDouble = return TypeBool
+resolveBinOpType Neq a b = Left $ "invalid argument type for Neq: " ++ show a ++ ", " ++ show b
+resolveBinOpType Lt TypeInt TypeInt = return TypeBool
+resolveBinOpType Lt TypeDouble TypeDouble = return TypeBool
+resolveBinOpType Lt a b = Left $ "invalid argument type for Lt: " ++ show a ++ ", " ++ show b
+resolveBinOpType Le TypeInt TypeInt = return TypeBool
+resolveBinOpType Le TypeDouble TypeDouble = return TypeBool
+resolveBinOpType Le a b = Left $ "invalid argument type for Le: " ++ show a ++ ", " ++ show b
+resolveBinOpType Gt TypeInt TypeInt = return TypeBool
+resolveBinOpType Gt TypeDouble TypeDouble = return TypeBool
+resolveBinOpType Gt a b = Left $ "invalid argument type for Gt: " ++ show a ++ ", " ++ show b
+resolveBinOpType Ge TypeInt TypeInt = return TypeBool
+resolveBinOpType Ge TypeDouble TypeDouble = return TypeBool
+resolveBinOpType Ge a b = Left $ "invalid argument type for Ge: " ++ show a ++ ", " ++ show b
 
 resolveLValue :: Map Text (GlobalVarIdx, Type') -> Map Text (LocalVarIdx, Type') -> P.Expr -> Either String LValue
 resolveLValue gvarMap lvarMap (P.ExprReference name) = do
