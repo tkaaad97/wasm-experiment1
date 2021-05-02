@@ -1,18 +1,35 @@
 module SampleLang.CodeGen.Wasm
-    (
+    ( genExpr
+    , genStatement
+    , genFunction
+    , gen
     ) where
 
 import Data.Text (Text)
 import Data.Vector (Vector)
-import qualified Data.Vector as Vector (foldM')
+import qualified Data.Vector as Vector (foldM', fromList, imap, map, mapM,
+                                        singleton)
 import qualified SampleLang.Ast.Resolved as R
 import SampleLang.Ast.Types
 import VectorBuilder.Builder (Builder)
-import qualified VectorBuilder.Builder as Builder (empty, foldable, singleton,
-                                                   vector)
+import qualified VectorBuilder.Builder as Builder (empty, singleton)
+import qualified VectorBuilder.Vector as Builder (build)
 import qualified Wasm.Types as Wasm
 
 data WasmFunc = WasmFunc !Text !Wasm.FuncType !(Vector Wasm.ValType) !(Vector Wasm.Instr)
+
+gen :: R.Program -> Either String Wasm.Module
+gen (R.Program funcs _) = do
+    wasmFuncVec <- Vector.mapM genFunction funcs
+    let typeVec = Vector.map (\(WasmFunc _ type_ _ _) -> type_) wasmFuncVec
+        funcVec = Vector.imap (\i (WasmFunc _ _ locals instrVec) -> Wasm.Func (fromIntegral i) locals instrVec) wasmFuncVec
+        exportVec = Vector.imap (\i (WasmFunc name _ _ _) -> Wasm.Export name (Wasm.ExportFunc (fromIntegral i))) wasmFuncVec
+        wasm = Wasm.Module
+            { Wasm.moduleFuncs = funcVec
+            , Wasm.moduleTypes = typeVec
+            , Wasm.moduleExports = exportVec
+            }
+    return wasm
 
 genExpr :: R.Expr -> Either String (Builder Wasm.Instr)
 genExpr (R.ExprUnary type_ op e)        = genUnOp op type_ e
@@ -166,3 +183,30 @@ genFunctionCall :: FunctionIdx -> Vector R.Expr -> Either String (Builder Wasm.I
 genFunctionCall (FunctionIdx idx) args = do
     xs <- Vector.foldM' (\acc e -> (acc <>) <$> genExpr e) Builder.empty args
     return $ xs <> Builder.singleton (Wasm.Call (fromIntegral idx))
+
+genStatement :: R.Statement -> Either String (Builder Wasm.Instr)
+genStatement (R.StatementExpr e) = genExpr e
+genStatement _                   = Left "unimplemented"
+
+genFunction :: R.Function -> Either String WasmFunc
+genFunction (R.Function name funcType locals body) = do
+    builder <- Vector.foldM' (\acc e -> (acc <>) <$> genStatement e) Builder.empty body
+    let instrVec = Builder.build builder
+        localVec = genLocalVec locals
+        type_ = genFunctionType funcType
+    return (WasmFunc name type_ localVec instrVec)
+
+genLocalVec :: Vector LocalVar -> Vector Wasm.ValType
+genLocalVec = Vector.map $ \(LocalVar _ type_) -> toValType type_
+
+genFunctionType :: FunctionType -> Wasm.FuncType
+genFunctionType (FunctionType params result) = Wasm.FuncType (Wasm.ResultType paramVec) (Wasm.ResultType resultVec)
+    where
+    paramVec = Vector.fromList . map (\(Parameter _ type_) -> toValType type_) $ params
+    resultVec = Vector.singleton (toValType result)
+
+toValType :: Type' -> Wasm.ValType
+toValType TypeInt        = Wasm.NumType Wasm.I32
+toValType TypeBool       = Wasm.NumType Wasm.I32
+toValType TypeDouble     = Wasm.NumType Wasm.F64
+toValType TypeFunction{} = Wasm.RefType Wasm.FuncRef
