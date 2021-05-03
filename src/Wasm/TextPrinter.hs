@@ -95,8 +95,8 @@ buildFunc (FuncType (ResultType params) (ResultType results)) funcidx (Func type
           , mconcat ["(type ", Builder.decimal typeidx, ")"]
           ] ++
           [ buildParam params | not (null params) ] ++
-          [ buildLocals locals | not (null locals) ] ++
           [ buildResult results | not (null results) ] ++
+          [ buildLocals locals | not (null locals) ] ++
           [ buildFuncBody body ]
         )
     <>

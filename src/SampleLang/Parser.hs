@@ -174,7 +174,7 @@ declaration =
     t <- primitiveType
     name <- identifier
     -- todo function type
-    -- todo initializeder
+    -- todo initializer
     return (Parameter name t)
 
 statement :: Parser Statement
