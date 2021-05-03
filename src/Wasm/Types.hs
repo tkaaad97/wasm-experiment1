@@ -7,6 +7,7 @@ module Wasm.Types
     , ValType(..)
     , ResultType(..)
     , FuncType(..)
+    , BlockType(..)
     , IUnop(..)
     , IBinop(..)
     , FUnop(..)
@@ -61,6 +62,12 @@ data Func = Func
     , funcLocals :: !(Vector ValType)
     , funcBody   :: !(Vector Instr)
     } deriving (Show, Eq)
+
+data BlockType =
+    BlockTypeIdx !Word32 |
+    BlockTypeFuncType !FuncType |
+    BlockTypeEmpty
+    deriving (Show, Eq)
 
 data IUnop =
     Clz |
@@ -158,6 +165,7 @@ data Instr =
     LocalTee !Word32 |
     GlobalGet !Word32 |
     GlobalSet !Word32 |
+    Block !BlockType !(Vector Instr) |
     Call !Word32
     deriving (Show, Eq)
 

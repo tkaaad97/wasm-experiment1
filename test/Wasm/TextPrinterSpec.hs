@@ -23,6 +23,12 @@ modules =
         (Vector.singleton (FuncType (ResultType $ Vector.fromList [NumType I32, NumType I32]) (ResultType $ Vector.fromList [NumType I32])))
         (Vector.singleton (Func 0 mempty $ Vector.fromList [LocalGet 0, LocalGet 1, I32Binary IAdd]))
         (Vector.singleton (Export "add" (ExportFunc 0)))
+      ),
+      ( "module-has-block"
+      , Module
+        (Vector.singleton (FuncType (ResultType mempty) (ResultType . Vector.singleton $ NumType I32)))
+        (Vector.singleton (Func 0 mempty $ Vector.fromList [Block (BlockTypeFuncType (FuncType (ResultType mempty) (ResultType . Vector.singleton $ NumType I32))) (Vector.fromList [I32Const 0, Block (BlockTypeFuncType (FuncType (ResultType mempty) (ResultType . Vector.singleton $ NumType I32))) (Vector.fromList [I32Const 0, I32Const 1, I32Binary IAdd]), I32Binary IAdd])]))
+        (Vector.singleton (Export "blockfunc" (ExportFunc 0)))
       )
     ]
 

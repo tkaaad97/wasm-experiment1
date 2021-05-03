@@ -89,137 +89,146 @@ buildFuncs types = Vector.toList . Vector.imap f
 
 buildFunc :: FuncType -> Int -> Func -> Builder
 buildFunc (FuncType (ResultType params) (ResultType results)) funcidx (Func typeidx locals body) =
-    intercalateBuilder "\n    "
-        ( "(func" :
-          [ buildIndex funcidx
-          , mconcat ["(type ", Builder.decimal typeidx, ")"]
+    intercalateBuilder "\n"
+        ( [ intercalateBuilder " " $ ["(func", buildIndex funcidx, "(type " <> Builder.decimal typeidx <> ")"] ++
+              [ buildParam params | not (null params) ] ++
+              [ buildResult results | not (null results) ]
           ] ++
-          [ buildParam params | not (null params) ] ++
-          [ buildResult results | not (null results) ] ++
-          [ buildLocals locals | not (null locals) ] ++
-          [ buildFuncBody body ]
+          [ indent <> buildLocals locals | not (null locals) ] ++
+          [ buildInstrVec indent body ]
         )
     <>
     "  )"
+    where
+    indent = "    "
 
-buildFuncBody :: Vector Instr -> Builder
-buildFuncBody instrs =
-    intercalateBuilder "\n    " (map buildInstr (Vector.toList instrs))
+buildInstrVec :: Builder -> Vector Instr -> Builder
+buildInstrVec indent instrs =
+    intercalateBuilder "\n" (map (buildInstr indent) (Vector.toList instrs))
     <>
     "\n"
 
-buildInstr :: Instr -> Builder
-buildInstr Nop                  = "nop"
-buildInstr Unreachable          = "unreachable"
-buildInstr (I32Const a)         = "i32.const " <> Builder.decimal a
-buildInstr (I64Const a)         = "i64.const " <> Builder.decimal a
-buildInstr (F32Const a)         = "f32.const " <> Builder.realFloat a
-buildInstr (F64Const a)         = "f64.const " <> Builder.realFloat a
-buildInstr (I32Unary Clz)       = "i32.clz"
-buildInstr (I32Unary Ctz)       = "i32.ctz"
-buildInstr (I32Unary Popcnt)    = "i32.popcnt"
-buildInstr (I64Unary Clz)       = "i64.clz"
-buildInstr (I64Unary Ctz)       = "i64.ctz"
-buildInstr (I64Unary Popcnt)    = "i64.popcnt"
-buildInstr (F32Unary Abs)       = "f32.abs"
-buildInstr (F32Unary Neg)       = "f32.neg"
-buildInstr (F32Unary Sqrt)      = "f32.sqrt"
-buildInstr (F32Unary Ceil)      = "f32.ceil"
-buildInstr (F32Unary Floor)     = "f32.floor"
-buildInstr (F32Unary Trunc)     = "f32.trunc"
-buildInstr (F32Unary Nearest)   = "f32.nearest"
-buildInstr (F64Unary Abs)       = "f64.abs"
-buildInstr (F64Unary Neg)       = "f64.neg"
-buildInstr (F64Unary Sqrt)      = "f64.sqrt"
-buildInstr (F64Unary Ceil)      = "f64.ceil"
-buildInstr (F64Unary Floor)     = "f64.floor"
-buildInstr (F64Unary Trunc)     = "f64.trunc"
-buildInstr (F64Unary Nearest)   = "f64.nearest"
-buildInstr (I32Binary IAdd)     = "i32.add"
-buildInstr (I32Binary ISub)     = "i32.sub"
-buildInstr (I32Binary IMul)     = "i32.mul"
-buildInstr (I32Binary DivS)     = "i32.div_s"
-buildInstr (I32Binary DivU)     = "i32.div_u"
-buildInstr (I32Binary RemS)     = "i32.rem_s"
-buildInstr (I32Binary RemU)     = "i32.rem_u"
-buildInstr (I32Binary And)      = "i32.and"
-buildInstr (I32Binary Or)       = "i32.or"
-buildInstr (I32Binary Xor)      = "i32.xor"
-buildInstr (I32Binary Shl)      = "i32.shl"
-buildInstr (I32Binary ShrS)     = "i32.shrs"
-buildInstr (I32Binary ShrU)     = "i32.shru"
-buildInstr (I32Binary Rotl)     = "i32.rotl"
-buildInstr (I32Binary Rotr)     = "i32.rotr"
-buildInstr (I64Binary IAdd)     = "i64.add"
-buildInstr (I64Binary ISub)     = "i64.sub"
-buildInstr (I64Binary IMul)     = "i64.mul"
-buildInstr (I64Binary DivS)     = "i64.div_s"
-buildInstr (I64Binary DivU)     = "i64.div_u"
-buildInstr (I64Binary RemS)     = "i64.rem_s"
-buildInstr (I64Binary RemU)     = "i64.rem_u"
-buildInstr (I64Binary And)      = "i64.and"
-buildInstr (I64Binary Or)       = "i64.or"
-buildInstr (I64Binary Xor)      = "i64.xor"
-buildInstr (I64Binary Shl)      = "i64.shl"
-buildInstr (I64Binary ShrS)     = "i64.shrs"
-buildInstr (I64Binary ShrU)     = "i64.shru"
-buildInstr (I64Binary Rotl)     = "i64.rotl"
-buildInstr (I64Binary Rotr)     = "i64.rotr"
-buildInstr (F32Binary Add)      = "f32.add"
-buildInstr (F32Binary Sub)      = "f32.sub"
-buildInstr (F32Binary Mul)      = "f32.mul"
-buildInstr (F32Binary Div)      = "f32.div"
-buildInstr (F32Binary Min)      = "f32.min"
-buildInstr (F32Binary Max)      = "f32.max"
-buildInstr (F32Binary Copysign) = "f32.copysign"
-buildInstr (F64Binary Add)      = "f64.add"
-buildInstr (F64Binary Sub)      = "f64.sub"
-buildInstr (F64Binary Mul)      = "f64.mul"
-buildInstr (F64Binary Div)      = "f64.div"
-buildInstr (F64Binary Min)      = "f64.min"
-buildInstr (F64Binary Max)      = "f64.max"
-buildInstr (F64Binary Copysign) = "f64.copysign"
-buildInstr (I32Test Eqz)        = "i32.eqz"
-buildInstr (I64Test Eqz)        = "i64.eqz"
-buildInstr (I32Relation IEq)    = "i32.eq"
-buildInstr (I32Relation INe)    = "i32.ne"
-buildInstr (I32Relation LtS)    = "i32.lt_s"
-buildInstr (I32Relation LtU)    = "i32.lt_u"
-buildInstr (I32Relation GtS)    = "i32.gt_s"
-buildInstr (I32Relation GtU)    = "i32.gt_u"
-buildInstr (I32Relation LeS)    = "i32.le_s"
-buildInstr (I32Relation LeU)    = "i32.le_u"
-buildInstr (I32Relation GeS)    = "i32.ge_s"
-buildInstr (I32Relation GeU)    = "i32.ge_u"
-buildInstr (I64Relation IEq)    = "i64.eq"
-buildInstr (I64Relation INe)    = "i64.ne"
-buildInstr (I64Relation LtS)    = "i64.lt_s"
-buildInstr (I64Relation LtU)    = "i64.lt_u"
-buildInstr (I64Relation GtS)    = "i64.gt_s"
-buildInstr (I64Relation GtU)    = "i64.gt_u"
-buildInstr (I64Relation LeS)    = "i64.le_s"
-buildInstr (I64Relation LeU)    = "i64.le_u"
-buildInstr (I64Relation GeS)    = "i64.ge_s"
-buildInstr (I64Relation GeU)    = "i64.ge_u"
-buildInstr (F32Relation FEq)    = "f32.eq"
-buildInstr (F32Relation FNe)    = "f32.ne"
-buildInstr (F32Relation Lt)     = "f32.lt"
-buildInstr (F32Relation Gt)     = "f32.gt"
-buildInstr (F32Relation Le)     = "f32.le"
-buildInstr (F32Relation Ge)     = "f32.ge"
-buildInstr (F64Relation FEq)    = "f64.eq"
-buildInstr (F64Relation FNe)    = "f64.ne"
-buildInstr (F64Relation Lt)     = "f64.lt"
-buildInstr (F64Relation Gt)     = "f64.gt"
-buildInstr (F64Relation Le)     = "f64.le"
-buildInstr (F64Relation Ge)     = "f64.ge"
-buildInstr (RefFunc a)          = "ref.func " <> Builder.decimal a
-buildInstr (LocalGet a)         = "local.get " <> Builder.decimal a
-buildInstr (LocalSet a)         = "local.set " <> Builder.decimal a
-buildInstr (LocalTee a)         = "local.tee " <> Builder.decimal a
-buildInstr (GlobalGet a)        = "global.get " <> Builder.decimal a
-buildInstr (GlobalSet a)        = "global.set " <> Builder.decimal a
-buildInstr (Call a)             = "call " <> Builder.decimal a
+buildInstr :: Builder -> Instr -> Builder
+buildInstr indent Nop                  = indent <> "nop"
+buildInstr indent Unreachable          = indent <> "unreachable"
+buildInstr indent (I32Const a)         = indent <> "i32.const " <> Builder.decimal a
+buildInstr indent (I64Const a)         = indent <> "i64.const " <> Builder.decimal a
+buildInstr indent (F32Const a)         = indent <> "f32.const " <> Builder.realFloat a
+buildInstr indent (F64Const a)         = indent <> "f64.const " <> Builder.realFloat a
+buildInstr indent (I32Unary Clz)       = indent <> "i32.clz"
+buildInstr indent (I32Unary Ctz)       = indent <> "i32.ctz"
+buildInstr indent (I32Unary Popcnt)    = indent <> "i32.popcnt"
+buildInstr indent (I64Unary Clz)       = indent <> "i64.clz"
+buildInstr indent (I64Unary Ctz)       = indent <> "i64.ctz"
+buildInstr indent (I64Unary Popcnt)    = indent <> "i64.popcnt"
+buildInstr indent (F32Unary Abs)       = indent <> "f32.abs"
+buildInstr indent (F32Unary Neg)       = indent <> "f32.neg"
+buildInstr indent (F32Unary Sqrt)      = indent <> "f32.sqrt"
+buildInstr indent (F32Unary Ceil)      = indent <> "f32.ceil"
+buildInstr indent (F32Unary Floor)     = indent <> "f32.floor"
+buildInstr indent (F32Unary Trunc)     = indent <> "f32.trunc"
+buildInstr indent (F32Unary Nearest)   = indent <> "f32.nearest"
+buildInstr indent (F64Unary Abs)       = indent <> "f64.abs"
+buildInstr indent (F64Unary Neg)       = indent <> "f64.neg"
+buildInstr indent (F64Unary Sqrt)      = indent <> "f64.sqrt"
+buildInstr indent (F64Unary Ceil)      = indent <> "f64.ceil"
+buildInstr indent (F64Unary Floor)     = indent <> "f64.floor"
+buildInstr indent (F64Unary Trunc)     = indent <> "f64.trunc"
+buildInstr indent (F64Unary Nearest)   = indent <> "f64.nearest"
+buildInstr indent (I32Binary IAdd)     = indent <> "i32.add"
+buildInstr indent (I32Binary ISub)     = indent <> "i32.sub"
+buildInstr indent (I32Binary IMul)     = indent <> "i32.mul"
+buildInstr indent (I32Binary DivS)     = indent <> "i32.div_s"
+buildInstr indent (I32Binary DivU)     = indent <> "i32.div_u"
+buildInstr indent (I32Binary RemS)     = indent <> "i32.rem_s"
+buildInstr indent (I32Binary RemU)     = indent <> "i32.rem_u"
+buildInstr indent (I32Binary And)      = indent <> "i32.and"
+buildInstr indent (I32Binary Or)       = indent <> "i32.or"
+buildInstr indent (I32Binary Xor)      = indent <> "i32.xor"
+buildInstr indent (I32Binary Shl)      = indent <> "i32.shl"
+buildInstr indent (I32Binary ShrS)     = indent <> "i32.shrs"
+buildInstr indent (I32Binary ShrU)     = indent <> "i32.shru"
+buildInstr indent (I32Binary Rotl)     = indent <> "i32.rotl"
+buildInstr indent (I32Binary Rotr)     = indent <> "i32.rotr"
+buildInstr indent (I64Binary IAdd)     = indent <> "i64.add"
+buildInstr indent (I64Binary ISub)     = indent <> "i64.sub"
+buildInstr indent (I64Binary IMul)     = indent <> "i64.mul"
+buildInstr indent (I64Binary DivS)     = indent <> "i64.div_s"
+buildInstr indent (I64Binary DivU)     = indent <> "i64.div_u"
+buildInstr indent (I64Binary RemS)     = indent <> "i64.rem_s"
+buildInstr indent (I64Binary RemU)     = indent <> "i64.rem_u"
+buildInstr indent (I64Binary And)      = indent <> "i64.and"
+buildInstr indent (I64Binary Or)       = indent <> "i64.or"
+buildInstr indent (I64Binary Xor)      = indent <> "i64.xor"
+buildInstr indent (I64Binary Shl)      = indent <> "i64.shl"
+buildInstr indent (I64Binary ShrS)     = indent <> "i64.shrs"
+buildInstr indent (I64Binary ShrU)     = indent <> "i64.shru"
+buildInstr indent (I64Binary Rotl)     = indent <> "i64.rotl"
+buildInstr indent (I64Binary Rotr)     = indent <> "i64.rotr"
+buildInstr indent (F32Binary Add)      = indent <> "f32.add"
+buildInstr indent (F32Binary Sub)      = indent <> "f32.sub"
+buildInstr indent (F32Binary Mul)      = indent <> "f32.mul"
+buildInstr indent (F32Binary Div)      = indent <> "f32.div"
+buildInstr indent (F32Binary Min)      = indent <> "f32.min"
+buildInstr indent (F32Binary Max)      = indent <> "f32.max"
+buildInstr indent (F32Binary Copysign) = indent <> "f32.copysign"
+buildInstr indent (F64Binary Add)      = indent <> "f64.add"
+buildInstr indent (F64Binary Sub)      = indent <> "f64.sub"
+buildInstr indent (F64Binary Mul)      = indent <> "f64.mul"
+buildInstr indent (F64Binary Div)      = indent <> "f64.div"
+buildInstr indent (F64Binary Min)      = indent <> "f64.min"
+buildInstr indent (F64Binary Max)      = indent <> "f64.max"
+buildInstr indent (F64Binary Copysign) = indent <> "f64.copysign"
+buildInstr indent (I32Test Eqz)        = indent <> "i32.eqz"
+buildInstr indent (I64Test Eqz)        = indent <> "i64.eqz"
+buildInstr indent (I32Relation IEq)    = indent <> "i32.eq"
+buildInstr indent (I32Relation INe)    = indent <> "i32.ne"
+buildInstr indent (I32Relation LtS)    = indent <> "i32.lt_s"
+buildInstr indent (I32Relation LtU)    = indent <> "i32.lt_u"
+buildInstr indent (I32Relation GtS)    = indent <> "i32.gt_s"
+buildInstr indent (I32Relation GtU)    = indent <> "i32.gt_u"
+buildInstr indent (I32Relation LeS)    = indent <> "i32.le_s"
+buildInstr indent (I32Relation LeU)    = indent <> "i32.le_u"
+buildInstr indent (I32Relation GeS)    = indent <> "i32.ge_s"
+buildInstr indent (I32Relation GeU)    = indent <> "i32.ge_u"
+buildInstr indent (I64Relation IEq)    = indent <> "i64.eq"
+buildInstr indent (I64Relation INe)    = indent <> "i64.ne"
+buildInstr indent (I64Relation LtS)    = indent <> "i64.lt_s"
+buildInstr indent (I64Relation LtU)    = indent <> "i64.lt_u"
+buildInstr indent (I64Relation GtS)    = indent <> "i64.gt_s"
+buildInstr indent (I64Relation GtU)    = indent <> "i64.gt_u"
+buildInstr indent (I64Relation LeS)    = indent <> "i64.le_s"
+buildInstr indent (I64Relation LeU)    = indent <> "i64.le_u"
+buildInstr indent (I64Relation GeS)    = indent <> "i64.ge_s"
+buildInstr indent (I64Relation GeU)    = indent <> "i64.ge_u"
+buildInstr indent (F32Relation FEq)    = indent <> "f32.eq"
+buildInstr indent (F32Relation FNe)    = indent <> "f32.ne"
+buildInstr indent (F32Relation Lt)     = indent <> "f32.lt"
+buildInstr indent (F32Relation Gt)     = indent <> "f32.gt"
+buildInstr indent (F32Relation Le)     = indent <> "f32.le"
+buildInstr indent (F32Relation Ge)     = indent <> "f32.ge"
+buildInstr indent (F64Relation FEq)    = indent <> "f64.eq"
+buildInstr indent (F64Relation FNe)    = indent <> "f64.ne"
+buildInstr indent (F64Relation Lt)     = indent <> "f64.lt"
+buildInstr indent (F64Relation Gt)     = indent <> "f64.gt"
+buildInstr indent (F64Relation Le)     = indent <> "f64.le"
+buildInstr indent (F64Relation Ge)     = indent <> "f64.ge"
+buildInstr indent (RefFunc a)          = indent <> "ref.func " <> Builder.decimal a
+buildInstr indent (LocalGet a)         = indent <> "local.get " <> Builder.decimal a
+buildInstr indent (LocalSet a)         = indent <> "local.set " <> Builder.decimal a
+buildInstr indent (LocalTee a)         = indent <> "local.tee " <> Builder.decimal a
+buildInstr indent (GlobalGet a)        = indent <> "global.get " <> Builder.decimal a
+buildInstr indent (GlobalSet a)        = indent <> "global.set " <> Builder.decimal a
+buildInstr indent (Block bt xs)        = indent <> "block " <> buildBlockType bt <> "\n" <> buildInstrVec (indent <> "  ") xs <> indent <> "end"
+buildInstr indent (Call a)             = indent <> "call " <> Builder.decimal a
+
+buildBlockType :: BlockType -> Builder
+buildBlockType (BlockTypeIdx idx) = "(type " <> Builder.decimal idx <> ")"
+buildBlockType (BlockTypeFuncType (FuncType (ResultType params) (ResultType results))) =
+    intercalateBuilder " " $
+        [ buildParam params | not (null params)] ++
+        [ buildResult results | not (null results) ]
+buildBlockType BlockTypeEmpty = mempty
 
 buildExports :: Vector Export -> [Builder]
 buildExports = Vector.toList . Vector.map buildExport
