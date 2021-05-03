@@ -215,10 +215,15 @@ functionDefinition =
     Lexer.lexeme Char.space $ do
     returnType <- primitiveType
     name <- identifier
-    params <- parens (Parser.many declaration)
+    params <- parens (Parser.try parameters <|> return [])
     body <- braces (Parser.many statement)
     let funcType = FunctionType params returnType
     return (FunctionDefinition name funcType body)
+    where
+    parameters = do
+        x <- declaration
+        xs <- Parser.many (symbol "," *> declaration)
+        return (x : xs)
 
 program :: Parser Ast
 program =
