@@ -9,6 +9,7 @@ dependencies:
 - base >= 4.8 && < 5
 - bytestring
 - containers
+- filepath
 - megaparsec
 - text
 - vector
@@ -30,6 +31,15 @@ library:
   - wasmtime
 
 executables:
+  compiler:
+    main:                Main.hs
+    source-dirs:         compiler
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - wasm-experiment1
   wasm-experiment1-exe:
     main:                Main.hs
     source-dirs:         app

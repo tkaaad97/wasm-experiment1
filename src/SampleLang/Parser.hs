@@ -2,6 +2,8 @@
 module SampleLang.Parser
     ( expr
     , statement
+    , program
+    , parseProgram
     ) where
 
 import Control.Applicative ()
@@ -12,15 +14,17 @@ import Data.Functor (($>))
 import Data.Int (Int32)
 import Data.Text (Text)
 import qualified Data.Text as Text (pack)
+import Data.Void (Void)
 import SampleLang.Ast.Parsed
 import Text.Megaparsec ((<|>))
-import qualified Text.Megaparsec as Parser (Parsec, between, choice, many,
-                                            option, satisfy, try)
+import qualified Text.Megaparsec as Parser (Parsec, between, choice,
+                                            errorBundlePretty, many, option,
+                                            parse, satisfy, try)
 import qualified Text.Megaparsec.Char as Char (space)
 import qualified Text.Megaparsec.Char.Lexer as Lexer (decimal, float, lexeme,
                                                       symbol)
 
-type Parser = Parser.Parsec String Text
+type Parser = Parser.Parsec Void Text
 
 symbol :: Text -> Parser ()
 symbol = void . Lexer.symbol Char.space
@@ -216,4 +220,12 @@ functionDefinition =
     let funcType = FunctionType params returnType
     return (FunctionDefinition name funcType body)
 
---program :: Parser Program
+program :: Parser Ast
+program =
+    fmap Ast . Lexer.lexeme Char.space . Parser.many $
+        Parser.try globalVarDecl <|> (FuncDef <$> functionDefinition)
+    where
+    globalVarDecl = Decl <$> (declaration <* symbol ";")
+
+parseProgram :: Text -> Either String Ast
+parseProgram input = either (Left . Parser.errorBundlePretty) return $ Parser.parse program "Ast" input

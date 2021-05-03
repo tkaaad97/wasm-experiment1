@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 636712fc15f08b6d4a8f9c20b2cc6b83932f2fd4b789447271b42eb030373dda
+-- hash: a5a48fd779a47633b1449128046a0647c0e3a09362e6f4be73c3a6dd3af4009d
 
 name:           wasm-experiment1
 version:        0.1.0.0
@@ -20,6 +20,7 @@ library
       SampleLang.Ast.Resolved
       SampleLang.Ast.Types
       SampleLang.CodeGen.Wasm
+      SampleLang.Compile
       SampleLang.Parser
       SampleLang.Resolve
       Wasm
@@ -37,10 +38,30 @@ library
       base >=4.8 && <5
     , bytestring
     , containers
+    , filepath
     , megaparsec
     , text
     , vector
     , vector-builder
+  default-language: Haskell2010
+
+executable compiler
+  main-is: Main.hs
+  other-modules:
+      Paths_wasm_experiment1
+  hs-source-dirs:
+      compiler
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -Wtabs -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.8 && <5
+    , bytestring
+    , containers
+    , filepath
+    , megaparsec
+    , text
+    , vector
+    , vector-builder
+    , wasm-experiment1
   default-language: Haskell2010
 
 executable wasm-experiment1-exe
@@ -54,6 +75,7 @@ executable wasm-experiment1-exe
       base >=4.8 && <5
     , bytestring
     , containers
+    , filepath
     , megaparsec
     , text
     , vector
