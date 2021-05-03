@@ -7,7 +7,7 @@ module SampleLang.CodeGen.Wasm
 
 import Data.Text (Text)
 import Data.Vector (Vector)
-import qualified Data.Vector as Vector (foldM', fromList, imap, map, mapM,
+import qualified Data.Vector as Vector (drop, foldM', fromList, imap, map, mapM,
                                         singleton)
 import qualified SampleLang.Ast.Resolved as R
 import SampleLang.Ast.Types
@@ -192,7 +192,8 @@ genFunction :: R.Function -> Either String WasmFunc
 genFunction (R.Function name funcType locals body) = do
     builder <- Vector.foldM' (\acc e -> (acc <>) <$> genStatement e) Builder.empty body
     let instrVec = Builder.build builder
-        localVec = genLocalVec locals
+        FunctionType params _ = funcType
+        localVec = genLocalVec (Vector.drop (length params) locals)
         type_ = genFunctionType funcType
     return (WasmFunc name type_ localVec instrVec)
 
