@@ -186,6 +186,8 @@ genFunctionCall (FunctionIdx idx) args = do
 
 genStatement :: R.Statement -> Either String (Builder Wasm.Instr)
 genStatement (R.StatementExpr e) = (<> Builder.singleton Wasm.Drop) <$> genExpr e
+genStatement (R.StatementReturn Nothing) = return (Builder.singleton Wasm.Return)
+genStatement (R.StatementReturn (Just e)) = (<> Builder.singleton Wasm.Return) <$> genExpr e
 genStatement _                   = Left "unimplemented"
 
 genFunction :: R.Function -> Either String WasmFunc
