@@ -19,12 +19,12 @@ spec = do
 case1 :: R.Program
 case1 = R.Program (Vector.singleton func1) mempty
     where
-    func1 = R.Function "f1" (FunctionType [Parameter "" TypeInt, Parameter "" TypeInt] TypeInt) mempty . Vector.singleton . R.StatementExpr $
+    func1 = R.Function "f1" (FunctionType [Parameter "" TypeInt, Parameter "" TypeInt] TypeVoid) mempty . Vector.singleton . R.StatementExpr $
         R.ExprBinary TypeInt Add (R.ExprReference TypeInt (ReferenceLocal (LocalVarIdx 0) TypeInt)) (R.ExprReference TypeInt (ReferenceLocal (LocalVarIdx 1) TypeInt))
 
 expected1 :: Wasm.Module
 expected1 = Wasm.Module types funcs exports
     where
-    types = Vector.singleton $ Wasm.FuncType (Wasm.ResultType (Vector.fromList [Wasm.NumType Wasm.I32, Wasm.NumType Wasm.I32])) (Wasm.ResultType (Vector.fromList [Wasm.NumType Wasm.I32]))
-    funcs = Vector.singleton $ Wasm.Func 0 mempty (Vector.fromList [Wasm.LocalGet 0, Wasm.LocalGet 1, Wasm.I32Binary Wasm.IAdd])
+    types = Vector.singleton $ Wasm.FuncType (Wasm.ResultType (Vector.fromList [Wasm.NumType Wasm.I32, Wasm.NumType Wasm.I32])) (Wasm.ResultType mempty)
+    funcs = Vector.singleton $ Wasm.Func 0 mempty (Vector.fromList [Wasm.LocalGet 0, Wasm.LocalGet 1, Wasm.I32Binary Wasm.IAdd, Wasm.Drop])
     exports = Vector.singleton $ Wasm.Export "f1" (Wasm.ExportFunc 0)

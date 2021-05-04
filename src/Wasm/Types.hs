@@ -171,7 +171,8 @@ data Instr =
     Br !Word32 |
     BrIf !Word32 |
     Return |
-    Call !Word32
+    Call !Word32 |
+    Drop
     deriving (Show, Eq)
 
 data Export = Export

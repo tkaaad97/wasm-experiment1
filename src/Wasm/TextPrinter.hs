@@ -226,6 +226,7 @@ buildInstr indent (Br a)               = indent <> "br " <> Builder.decimal a
 buildInstr indent (BrIf a)             = indent <> "br_if " <> Builder.decimal a
 buildInstr indent Return               = indent <> "return"
 buildInstr indent (Call a)             = indent <> "call " <> Builder.decimal a
+buildInstr indent Drop                 = indent <> "drop"
 
 buildBlockHeader :: Builder -> BlockType -> Builder
 buildBlockHeader name bt =
