@@ -219,9 +219,17 @@ buildInstr indent (LocalSet a)         = indent <> "local.set " <> Builder.decim
 buildInstr indent (LocalTee a)         = indent <> "local.tee " <> Builder.decimal a
 buildInstr indent (GlobalGet a)        = indent <> "global.get " <> Builder.decimal a
 buildInstr indent (GlobalSet a)        = indent <> "global.set " <> Builder.decimal a
-buildInstr indent (Block bt xs)        = indent <> "block " <> buildBlockType bt <> "\n" <> buildInstrVec (indent <> "  ") xs <> indent <> "end"
-buildInstr indent (If bt xs ys)        = indent <> "if " <> buildBlockType bt <> "\n" <> buildInstrVec (indent <> "  ") xs <> indent <> "else\n" <> buildInstrVec (indent <> "  ") ys <> indent <> "end"
+buildInstr indent (Block bt xs)        = indent <> buildBlockHeader "block" bt <> "\n" <> buildInstrVec (indent <> "  ") xs <> indent <> "end"
+buildInstr indent (Loop bt xs)         = indent <> buildBlockHeader "loop" bt <> "\n" <> buildInstrVec (indent <> "  ") xs <> indent <> "end"
+buildInstr indent (If bt xs ys)        = indent <> buildBlockHeader "if" bt <> "\n" <> buildInstrVec (indent <> "  ") xs <> indent <> "else\n" <> buildInstrVec (indent <> "  ") ys <> indent <> "end"
+buildInstr indent (Br a)               = indent <> "br " <> Builder.decimal a
+buildInstr indent (BrIf a)             = indent <> "br_if " <> Builder.decimal a
+buildInstr indent Return               = indent <> "return"
 buildInstr indent (Call a)             = indent <> "call " <> Builder.decimal a
+
+buildBlockHeader :: Builder -> BlockType -> Builder
+buildBlockHeader name bt =
+    intercalateBuilder " " $ name : [buildBlockType bt | bt /= BlockTypeEmpty]
 
 buildBlockType :: BlockType -> Builder
 buildBlockType (BlockTypeIdx idx) = "(type " <> Builder.decimal idx <> ")"

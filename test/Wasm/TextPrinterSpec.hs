@@ -35,6 +35,32 @@ modules =
         (Vector.singleton (FuncType (ResultType . Vector.fromList $ [NumType I32, NumType I32]) (ResultType . Vector.singleton $ NumType I32)))
         (Vector.singleton (Func 0 mempty $ Vector.fromList [LocalGet 0, LocalGet 1, I32Relation IEq, If (BlockTypeFuncType (FuncType (ResultType mempty) (ResultType . Vector.singleton $ NumType I32))) (Vector.singleton (I32Const 0)) (Vector.singleton (I32Const 100))]))
         (Vector.singleton (Export "iffunc" (ExportFunc 0)))
+      ),
+      ( "module-loop-br"
+      , Module
+        (Vector.singleton (FuncType (ResultType . Vector.singleton $ NumType I32) (ResultType . Vector.singleton $ NumType I32)))
+        (Vector.singleton (Func 0 (Vector.fromList [NumType I32, NumType I32]) . Vector.fromList $
+            [ Block BlockTypeEmpty . Vector.fromList $
+                [ Loop BlockTypeEmpty . Vector.fromList $
+                    [ LocalGet 0
+                    , LocalGet 1
+                    , I32Relation LeS
+                    , BrIf 0
+                    , LocalGet 2
+                    , LocalGet 1
+                    , I32Binary IAdd
+                    , LocalSet 2
+                    , LocalGet 1
+                    , I32Const 1
+                    , LocalSet 1
+                    , Br 1
+                    ]
+                ]
+            , LocalGet 2
+            , Return
+            ])
+        )
+        (Vector.singleton (Export "sum" (ExportFunc 0)))
       )
     ]
 

@@ -166,7 +166,11 @@ data Instr =
     GlobalGet !Word32 |
     GlobalSet !Word32 |
     Block !BlockType !(Vector Instr) |
+    Loop !BlockType !(Vector Instr) |
     If !BlockType !(Vector Instr) !(Vector Instr) |
+    Br !Word32 |
+    BrIf !Word32 |
+    Return |
     Call !Word32
     deriving (Show, Eq)
 
