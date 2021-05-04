@@ -24,12 +24,12 @@ data Expr =
 type DeclOrExpr = Either Parameter Expr
 
 data Statement =
-    StatementIf !Expr !(Vector Statement) |
+    StatementIf !Expr !(Vector Statement) !(Vector Statement) |
     StatementFor !DeclOrExpr !Expr !Expr !(Vector Statement) |
     StatementWhile !Expr !(Vector Statement) |
     StatementExpr !Expr |
     StatementDecl !Parameter |
-    StatementReturn !Expr
+    StatementReturn !(Maybe Expr)
     deriving (Show, Eq)
 
 data Function = Function

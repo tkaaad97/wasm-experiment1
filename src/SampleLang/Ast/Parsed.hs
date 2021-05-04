@@ -35,12 +35,12 @@ data Expr =
 type DeclOrExpr = Either Parameter Expr
 
 data Statement =
-    StatementIf !Expr ![Statement] |
+    StatementIf !Expr ![Statement] ![Statement] |
     StatementFor !DeclOrExpr !Expr !Expr ![Statement] |
     StatementWhile !Expr ![Statement] |
     StatementExpr !Expr |
     StatementDecl !Parameter |
-    StatementReturn !Expr
+    StatementReturn !(Maybe Expr)
     deriving (Show, Eq)
 
 data FunctionDefinition =

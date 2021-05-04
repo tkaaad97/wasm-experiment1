@@ -18,7 +18,7 @@ import SampleLang.Ast.Parsed
 import Text.Megaparsec ((<|>))
 import qualified Text.Megaparsec as Parser (Parsec, between, choice,
                                             errorBundlePretty, many, option,
-                                            parse, satisfy, try)
+                                            optional, parse, satisfy, try)
 import qualified Text.Megaparsec.Char as Char (space)
 import qualified Text.Megaparsec.Char.Lexer as Lexer (decimal, float, lexeme,
                                                       symbol)
@@ -192,8 +192,12 @@ statement =
     ifStatement = do
         symbol "if"
         cond <- parens expr
-        body <- braces (Parser.many statement)
-        return (StatementIf cond body)
+        body1 <- braces (Parser.many statement)
+        body2 <- Parser.try elsePart <|> return []
+        return (StatementIf cond body1 body2)
+    elsePart = do
+        symbol "else"
+        Parser.try ((:[]) <$> ifStatement) <|> braces (Parser.many statement)
     forStatement = do
         symbol "for"
         symbol "("
@@ -210,7 +214,7 @@ statement =
     exprStatement =
         StatementExpr <$> expr <* symbol ";"
     returnStatement =
-        symbol "return" *> (StatementReturn <$> expr) <* symbol ";"
+        symbol "return" *> (StatementReturn <$> Parser.optional expr) <* symbol ";"
 
 functionDefinition :: Parser FunctionDefinition
 functionDefinition =

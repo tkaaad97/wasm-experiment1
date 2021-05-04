@@ -9,11 +9,12 @@ module SampleLang.Resolve
 import Control.Monad (mplus, unless)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (fromList, lookup, size)
-import Data.Maybe (mapMaybe)
+import Data.Maybe (isJust, mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as Text (unpack)
 import Data.Vector (Vector)
-import qualified Data.Vector as Vector (fromList, imap, length, mapM, toList)
+import qualified Data.Vector as Vector (find, fromList, imap, last, length,
+                                        mapM, null, toList)
 import qualified SampleLang.Ast.Parsed as P
 import qualified SampleLang.Ast.Resolved as R
 import SampleLang.Ast.Types
@@ -44,11 +45,43 @@ resolve ast = do
 resolveFunction :: Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> P.FunctionDefinition -> Either String R.Function
 resolveFunction funcMap gvarMap funcDef = do
     body' <- Vector.fromList <$> mapM (resolveStatement funcMap gvarMap lvarMap) body
+    checkReturnType name (getResultType funcType) body'
     return (R.Function name funcType localVarVec body')
     where
     P.FunctionDefinition name funcType body = funcDef
     localVarVec = pickLocalVars funcDef
     lvarMap = Map.fromList . Vector.toList . Vector.imap (\i (LocalVar vname type_) -> (vname, (LocalVarIdx i, type_))) $ localVarVec
+
+checkReturnType :: Text -> Type' -> Vector R.Statement -> Either String ()
+checkReturnType name TypeVoid body
+    | Vector.null body = return ()
+    | isJust . Vector.find invalidReturn $ body = Left $ "function " ++ Text.unpack name ++ ": invalid return type"
+    | otherwise = return ()
+    where
+    invalidReturn (R.StatementReturn Nothing)  = False
+    invalidReturn (R.StatementReturn (Just _)) = True
+    invalidReturn _                            = False
+checkReturnType name type_ body
+    | Vector.null body = Left $ "function " ++ Text.unpack name ++ ": no return statement"
+    | isJust . Vector.find invalidReturn $ body = Left $ "function " ++ Text.unpack name ++ ": invalid return type"
+    | otherwise = checkStatementReturnType name (Vector.last body) type_
+    where
+    invalidReturn (R.StatementReturn Nothing) = True
+    invalidReturn (R.StatementReturn (Just expr))
+        | getExprType expr == type_ = False
+        | otherwise = True
+    invalidReturn _ = False
+
+checkStatementReturnType :: Text -> R.Statement -> Type' -> Either String ()
+checkStatementReturnType name (R.StatementIf _ body1 body2) type_ = checkReturnType name type_ body1 >> checkReturnType name type_ body2
+checkStatementReturnType name (R.StatementFor _ _ _ body) type_ = checkReturnType name type_ body
+checkStatementReturnType name (R.StatementWhile _ body) type_ = checkReturnType name type_ body
+checkStatementReturnType name R.StatementExpr{} _ = Left $ "function " ++ Text.unpack name ++ ": no return statement"
+checkStatementReturnType name R.StatementDecl{} _ = Left $ "function " ++ Text.unpack name ++ ": no return statement"
+checkStatementReturnType name (R.StatementReturn Nothing) _ = Left $ "function " ++ Text.unpack name ++ ": no return statement"
+checkStatementReturnType name (R.StatementReturn (Just e)) type_
+    | getExprType e /= type_ = Left $ "function " ++ Text.unpack name ++ ": invalid return type"
+    | otherwise = return ()
 
 resolveExpr :: Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> Map Text (LocalVarIdx, Type') -> P.Expr -> Either String R.Expr
 resolveExpr funcMap gvarMap lvarMap (P.ExprUnary op a) = do
@@ -137,10 +170,11 @@ resolveReference funcMap gvarMap lvarMap name = do
     maybe (Left $ "not found: " ++ Text.unpack name) return (maybeLocal `mplus` maybeGlobal `mplus` maybeFunction)
 
 resolveStatement :: Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> Map Text (LocalVarIdx, Type') -> P.Statement -> Either String R.Statement
-resolveStatement funcMap gvarMap lvarMap (P.StatementIf cond body) =
+resolveStatement funcMap gvarMap lvarMap (P.StatementIf cond body1 body2) =
     R.StatementIf <$>
         resolveExpr funcMap gvarMap lvarMap cond <*>
-        (Vector.fromList <$> mapM (resolveStatement funcMap gvarMap lvarMap) body)
+        (Vector.fromList <$> mapM (resolveStatement funcMap gvarMap lvarMap) body1) <*>
+        (Vector.fromList <$> mapM (resolveStatement funcMap gvarMap lvarMap) body2)
 resolveStatement funcMap gvarMap lvarMap (P.StatementFor (Left pre) cond post body) =
     R.StatementFor (Left pre) <$>
         resolveExpr funcMap gvarMap lvarMap cond <*>
@@ -161,8 +195,10 @@ resolveStatement funcMap gvarMap lvarMap (P.StatementExpr e) =
         resolveExpr funcMap gvarMap lvarMap e
 resolveStatement _ _ _ (P.StatementDecl a) =
     return (R.StatementDecl a)
-resolveStatement funcMap gvarMap lvarMap (P.StatementReturn e) =
-    R.StatementReturn <$> resolveExpr funcMap gvarMap lvarMap e
+resolveStatement funcMap gvarMap lvarMap (P.StatementReturn Nothing) =
+    return (R.StatementReturn Nothing)
+resolveStatement funcMap gvarMap lvarMap (P.StatementReturn (Just e)) =
+    R.StatementReturn . Just <$> resolveExpr funcMap gvarMap lvarMap e
 
 pickFunctionDefinitions :: P.Ast -> [P.FunctionDefinition]
 pickFunctionDefinitions (P.Ast xs) = mapMaybe isFuncDef xs
@@ -182,7 +218,7 @@ pickLocalVars (P.FunctionDefinition _ funcType statements) =
     where
     FunctionType params _ = funcType
     paramLocals = map parameterToLocalVar params
-    pick (P.StatementIf _ xs)                = concatMap pick xs
+    pick (P.StatementIf _ xs ys)             = concatMap pick (xs ++ ys)
     pick (P.StatementFor (Left param) _ _ _) = [parameterToLocalVar param]
     pick P.StatementFor{}                    = []
     pick (P.StatementWhile _ xs)             = concatMap pick xs

@@ -32,7 +32,7 @@ exprCases =
 
 stmtCases =
     [ ("int declaration", "int a;", Right $ StatementDecl (Parameter "a" TypeInt))
-    , ("if statement", "if (true) { }", Right $ StatementIf (ExprConstant (ConstBool True)) [])
+    , ("if statement", "if (true) { }", Right $ StatementIf (ExprConstant (ConstBool True)) [] [])
     , ("expr statement", "a == b;", Right $ StatementExpr (ExprBinary Equ (ExprReference "a") (ExprReference "b")))
     , ("for 1", "for (a = 0; a < 10; ++a) {}", Right $ StatementFor (Right (ExprAssign (ExprReference "a") (ExprConstant (ConstInt 0)))) (ExprBinary Lt (ExprReference "a") (ExprConstant (ConstInt 10))) (ExprUnary Increment (ExprReference "a")) mempty)
     , ("for 2", "for (int a; a < 10; ++a) {}", Right $ StatementFor (Left (Parameter "a" TypeInt)) (ExprBinary Lt (ExprReference "a") (ExprConstant (ConstInt 10))) (ExprUnary Increment (ExprReference "a")) mempty)
