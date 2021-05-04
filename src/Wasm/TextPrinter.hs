@@ -220,6 +220,7 @@ buildInstr indent (LocalTee a)         = indent <> "local.tee " <> Builder.decim
 buildInstr indent (GlobalGet a)        = indent <> "global.get " <> Builder.decimal a
 buildInstr indent (GlobalSet a)        = indent <> "global.set " <> Builder.decimal a
 buildInstr indent (Block bt xs)        = indent <> "block " <> buildBlockType bt <> "\n" <> buildInstrVec (indent <> "  ") xs <> indent <> "end"
+buildInstr indent (If bt xs ys)        = indent <> "if " <> buildBlockType bt <> "\n" <> buildInstrVec (indent <> "  ") xs <> indent <> "else\n" <> buildInstrVec (indent <> "  ") ys <> indent <> "end"
 buildInstr indent (Call a)             = indent <> "call " <> Builder.decimal a
 
 buildBlockType :: BlockType -> Builder

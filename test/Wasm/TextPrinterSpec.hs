@@ -29,6 +29,12 @@ modules =
         (Vector.singleton (FuncType (ResultType mempty) (ResultType . Vector.singleton $ NumType I32)))
         (Vector.singleton (Func 0 mempty $ Vector.fromList [Block (BlockTypeFuncType (FuncType (ResultType mempty) (ResultType . Vector.singleton $ NumType I32))) (Vector.fromList [I32Const 0, Block (BlockTypeFuncType (FuncType (ResultType mempty) (ResultType . Vector.singleton $ NumType I32))) (Vector.fromList [I32Const 0, I32Const 1, I32Binary IAdd]), I32Binary IAdd])]))
         (Vector.singleton (Export "blockfunc" (ExportFunc 0)))
+      ),
+      ( "module-has-if"
+      , Module
+        (Vector.singleton (FuncType (ResultType . Vector.fromList $ [NumType I32, NumType I32]) (ResultType . Vector.singleton $ NumType I32)))
+        (Vector.singleton (Func 0 mempty $ Vector.fromList [LocalGet 0, LocalGet 1, I32Relation IEq, If (BlockTypeFuncType (FuncType (ResultType mempty) (ResultType . Vector.singleton $ NumType I32))) (Vector.singleton (I32Const 0)) (Vector.singleton (I32Const 100))]))
+        (Vector.singleton (Export "iffunc" (ExportFunc 0)))
       )
     ]
 
