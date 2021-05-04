@@ -22,6 +22,7 @@ import Data.Int (Int32)
 import Data.Text (Text)
 
 data Type' =
+    TypeVoid |
     TypeInt |
     TypeBool |
     TypeDouble |

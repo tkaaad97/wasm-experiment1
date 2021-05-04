@@ -13,8 +13,7 @@ import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as Text (unpack)
 import Data.Vector (Vector)
-import qualified Data.Vector as Vector (fromList, imap, length, map, mapM,
-                                        toList)
+import qualified Data.Vector as Vector (fromList, imap, length, mapM, toList)
 import qualified SampleLang.Ast.Parsed as P
 import qualified SampleLang.Ast.Resolved as R
 import SampleLang.Ast.Types
@@ -49,7 +48,7 @@ resolveFunction funcMap gvarMap funcDef = do
     where
     P.FunctionDefinition name funcType body = funcDef
     localVarVec = pickLocalVars funcDef
-    lvarMap = Map.fromList . Vector.toList . Vector.imap (\i (LocalVar name type_) -> (name, (LocalVarIdx i, type_))) $ localVarVec
+    lvarMap = Map.fromList . Vector.toList . Vector.imap (\i (LocalVar vname type_) -> (vname, (LocalVarIdx i, type_))) $ localVarVec
 
 resolveExpr :: Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> Map Text (LocalVarIdx, Type') -> P.Expr -> Either String R.Expr
 resolveExpr funcMap gvarMap lvarMap (P.ExprUnary op a) = do

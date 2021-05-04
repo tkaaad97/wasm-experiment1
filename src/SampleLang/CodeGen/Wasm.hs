@@ -204,9 +204,12 @@ genFunctionType :: FunctionType -> Wasm.FuncType
 genFunctionType (FunctionType params result) = Wasm.FuncType (Wasm.ResultType paramVec) (Wasm.ResultType resultVec)
     where
     paramVec = Vector.fromList . map (\(Parameter _ type_) -> toValType type_) $ params
-    resultVec = Vector.singleton (toValType result)
+    resultVec
+        | result /= TypeVoid = Vector.singleton . toValType $ result
+        | otherwise = mempty
 
 toValType :: Type' -> Wasm.ValType
+toValType TypeVoid       = Wasm.NumType Wasm.I32
 toValType TypeInt        = Wasm.NumType Wasm.I32
 toValType TypeBool       = Wasm.NumType Wasm.I32
 toValType TypeDouble     = Wasm.NumType Wasm.F64

@@ -6,8 +6,7 @@ module SampleLang.Parser
     , parseProgram
     ) where
 
-import Control.Applicative ()
-import Control.Monad (void)
+import Control.Monad (unless, void)
 import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
 import Data.Foldable (foldl')
 import Data.Functor (($>))
@@ -160,10 +159,12 @@ relational =
 primitiveType :: Parser Type'
 primitiveType =
     Lexer.lexeme Char.space $
+    Parser.try voidType <|>
     Parser.try intType <|>
     Parser.try boolType <|>
     doubleType
     where
+    voidType = symbol "void" $> TypeVoid
     intType = symbol "int" $> TypeInt
     boolType = symbol "bool" $> TypeBool
     doubleType = symbol "double" $> TypeDouble
@@ -172,6 +173,7 @@ declaration :: Parser Parameter
 declaration =
     Lexer.lexeme Char.space $ do
     t <- primitiveType
+    unless (t /= TypeVoid) $ error "cannot declare void variable"
     name <- identifier
     -- todo function type
     -- todo initializer
