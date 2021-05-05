@@ -52,13 +52,15 @@ genUnOp Not TypeBool e = do
     a <- genExpr e
     return $ a <> Builder.singleton (Wasm.I32Const 0) <> Builder.singleton (Wasm.I32Relation Wasm.IEq)
 genUnOp Not type_ e = Left $ "codegen error. Not " ++ show type_ ++ " " ++ show e
-genUnOp Increment TypeInt e = do
-    a <- genExpr e
-    return $ a <> Builder.singleton (Wasm.I32Const 1) <> Builder.singleton (Wasm.I32Binary Wasm.IAdd)
+genUnOp Increment TypeInt (R.ExprReference _ (ReferenceLocal (LocalVarIdx idx) _)) =
+    return $ Builder.foldable [Wasm.LocalGet (fromIntegral idx), Wasm.I32Const 1, Wasm.I32Binary Wasm.IAdd, Wasm.LocalTee (fromIntegral idx)]
+genUnOp Increment TypeInt (R.ExprReference _ (ReferenceGlobal (GlobalVarIdx idx) _)) =
+    return $ Builder.foldable [Wasm.GlobalGet (fromIntegral idx), Wasm.I32Const 1, Wasm.I32Binary Wasm.IAdd, Wasm.GlobalSet (fromIntegral idx), Wasm.GlobalGet (fromIntegral idx)]
 genUnOp Increment type_ e = Left $ "codegen error. Increment " ++ show type_ ++ " " ++ show e
-genUnOp Decrement TypeInt e = do
-    a <- genExpr e
-    return $ a <> Builder.singleton (Wasm.I32Const 1) <> Builder.singleton (Wasm.I32Binary Wasm.ISub)
+genUnOp Decrement TypeInt (R.ExprReference _ (ReferenceLocal (LocalVarIdx idx) _)) =
+    return $ Builder.foldable [Wasm.LocalGet (fromIntegral idx), Wasm.I32Const 1, Wasm.I32Binary Wasm.ISub, Wasm.LocalTee (fromIntegral idx)]
+genUnOp Decrement TypeInt (R.ExprReference _ (ReferenceGlobal (GlobalVarIdx idx) _)) =
+    return $ Builder.foldable [Wasm.GlobalGet (fromIntegral idx), Wasm.I32Const 1, Wasm.I32Binary Wasm.ISub, Wasm.GlobalSet (fromIntegral idx), Wasm.GlobalGet (fromIntegral idx)]
 genUnOp Decrement type_ e =  Left $ "codegen error. Decrement" ++ show type_ ++ " " ++ show e
 
 genBinOp :: BinOp -> Type' -> R.Expr -> R.Expr -> Either String (Builder Wasm.Instr)
