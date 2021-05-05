@@ -184,7 +184,7 @@ statement =
     Lexer.lexeme Char.space $
     Parser.try ifStatement <|>
     Parser.try forStatement <|>
---    whileStatement <|>
+    whileStatement <|>
     Parser.try declarationStatement <|>
     Parser.try exprStatement <|>
     breakStatement <|>
@@ -210,6 +210,11 @@ statement =
         symbol ")"
         body <- braces (Parser.many statement)
         return (StatementFor pre cond post body)
+    whileStatement = do
+        symbol "while"
+        cond <- parens expr
+        body <- braces (Parser.many statement)
+        return (StatementWhile cond body)
     declarationStatement =
         StatementDecl <$> declaration <* symbol ";"
     exprStatement =
