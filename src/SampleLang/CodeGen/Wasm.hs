@@ -40,6 +40,10 @@ genExpr (R.ExprConstant _ a)            = return (genConstant a)
 genExpr (R.ExprReference _ a)           = return (genReference a)
 genExpr (R.ExprFunctionCall _ idx args) = genFunctionCall idx args
 
+genDeclOrExpr :: Either Parameter R.Expr -> Either String (Builder Wasm.Instr)
+genDeclOrExpr (Left _)  = return Builder.empty
+genDeclOrExpr (Right e) = genExpr e
+
 genUnOp :: UnOp -> Type' -> R.Expr -> Either String (Builder Wasm.Instr)
 genUnOp Negate TypeInt e = do
     a <- genExpr e
@@ -205,12 +209,34 @@ genStatement _ (R.StatementWhile cond body) = do
             bodyCode
             <>
             Builder.singleton (Wasm.Br 0)
+genStatement _ (R.StatementFor pre cond post body) = do
+    preCode <- genDeclOrExpr pre
+    condCode <- genExpr cond
+    bodyCode <- Vector.foldM' (\acc e -> (acc <>) <$> genStatement 1 e) Builder.empty body
+    postCode <- genExpr post
+    return . Builder.singleton . Wasm.Block Wasm.BlockTypeEmpty . Builder.build $
+        preCode
+        <>
+        Builder.singleton Wasm.Drop
+        <>
+        (Builder.singleton . Wasm.Loop Wasm.BlockTypeEmpty . Builder.build $
+            condCode
+            <>
+            Builder.foldable [ Wasm.I32Test Wasm.Eqz, Wasm.BrIf 1 ]
+            <>
+            bodyCode
+            <>
+            postCode
+            <>
+            Builder.singleton Wasm.Drop
+            <>
+            Builder.singleton (Wasm.Br 0)
+        )
 genStatement _ (R.StatementExpr e) = (<> Builder.singleton Wasm.Drop) <$> genExpr e
-genStatement _ (R.StatementDecl _) = return (Builder.empty) -- todo initializer
+genStatement _ (R.StatementDecl _) = return Builder.empty -- todo initializer
 genStatement breakLabel R.StatementBreak = return (Builder.singleton (Wasm.Br (fromIntegral breakLabel)))
 genStatement _ (R.StatementReturn Nothing) = return (Builder.singleton Wasm.Return)
 genStatement _ (R.StatementReturn (Just e)) = (<> Builder.singleton Wasm.Return) <$> genExpr e
-genStatement _ _ = Left "unimplemented"
 
 genFunction :: R.Function -> Either String WasmFunc
 genFunction (R.Function name funcType locals body) = do
