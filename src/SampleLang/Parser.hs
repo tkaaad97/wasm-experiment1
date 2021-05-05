@@ -184,10 +184,10 @@ statement =
     Lexer.lexeme Char.space $
     Parser.try ifStatement <|>
     Parser.try forStatement <|>
-    whileStatement <|>
+    Parser.try whileStatement <|>
     Parser.try declarationStatement <|>
     Parser.try exprStatement <|>
-    breakStatement <|>
+    Parser.try breakStatement <|>
     returnStatement
     where
     ifStatement = do
