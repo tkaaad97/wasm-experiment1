@@ -29,7 +29,8 @@ data Statement =
     StatementWhile !Expr !(Vector Statement) |
     StatementExpr !Expr |
     StatementDecl !Parameter |
-    StatementReturn !(Maybe Expr)
+    StatementReturn !(Maybe Expr) |
+    StatementBreak
     deriving (Show, Eq)
 
 data Function = Function

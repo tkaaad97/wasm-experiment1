@@ -195,6 +195,7 @@ resolveStatement funcMap gvarMap lvarMap (P.StatementExpr e) =
         resolveExpr funcMap gvarMap lvarMap e
 resolveStatement _ _ _ (P.StatementDecl a) =
     return (R.StatementDecl a)
+resolveStatement _ _ _ P.StatementBreak = return R.StatementBreak
 resolveStatement funcMap gvarMap lvarMap (P.StatementReturn Nothing) =
     return (R.StatementReturn Nothing)
 resolveStatement funcMap gvarMap lvarMap (P.StatementReturn (Just e)) =

@@ -187,6 +187,7 @@ statement =
 --    whileStatement <|>
     Parser.try declarationStatement <|>
     Parser.try exprStatement <|>
+    breakStatement <|>
     returnStatement
     where
     ifStatement = do
@@ -213,6 +214,8 @@ statement =
         StatementDecl <$> declaration <* symbol ";"
     exprStatement =
         StatementExpr <$> expr <* symbol ";"
+    breakStatement =
+        symbol "break" *> return StatementBreak <* symbol ";"
     returnStatement =
         symbol "return" *> (StatementReturn <$> Parser.optional expr) <* symbol ";"
 

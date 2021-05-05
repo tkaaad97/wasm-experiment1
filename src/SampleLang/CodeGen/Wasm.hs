@@ -12,7 +12,7 @@ import qualified Data.Vector as Vector (drop, foldM', fromList, imap, map, mapM,
 import qualified SampleLang.Ast.Resolved as R
 import SampleLang.Ast.Types
 import VectorBuilder.Builder (Builder)
-import qualified VectorBuilder.Builder as Builder (empty, singleton)
+import qualified VectorBuilder.Builder as Builder (empty, foldable, singleton)
 import qualified VectorBuilder.Vector as Builder (build)
 import qualified Wasm.Types as Wasm
 
@@ -184,15 +184,36 @@ genFunctionCall (FunctionIdx idx) args = do
     xs <- Vector.foldM' (\acc e -> (acc <>) <$> genExpr e) Builder.empty args
     return $ xs <> Builder.singleton (Wasm.Call (fromIntegral idx))
 
-genStatement :: R.Statement -> Either String (Builder Wasm.Instr)
-genStatement (R.StatementExpr e) = (<> Builder.singleton Wasm.Drop) <$> genExpr e
-genStatement (R.StatementReturn Nothing) = return (Builder.singleton Wasm.Return)
-genStatement (R.StatementReturn (Just e)) = (<> Builder.singleton Wasm.Return) <$> genExpr e
-genStatement _                   = Left "unimplemented"
+genStatement :: Int -> Int -> R.Statement -> Either String (Builder Wasm.Instr)
+genStatement _ label0 (R.StatementIf cond body1 body2) = do
+    let label = label0 + 1
+    condCode <- genExpr cond
+    body1Code <- Builder.build <$> Vector.foldM' (\acc e -> (acc <>) <$> genStatement label label e) Builder.empty body1
+    body2Code <- Builder.build <$> Vector.foldM' (\acc e -> (acc <>) <$> genStatement label label e) Builder.empty body2
+    return (condCode <> Builder.singleton (Wasm.If Wasm.BlockTypeEmpty body1Code body2Code))
+genStatement _ label0 (R.StatementWhile cond body) = do
+    let outerBlockLabel = label0 + 1
+        loopBlockLabel = label0 + 2
+    condCode <- genExpr cond
+    bodyCode <- Vector.foldM' (\acc e -> (acc <>) <$> genStatement outerBlockLabel loopBlockLabel e) Builder.empty body
+    return . Builder.singleton . Wasm.Block Wasm.BlockTypeEmpty .
+        Vector.singleton . Wasm.Loop Wasm.BlockTypeEmpty . Builder.build $
+            condCode
+            <>
+            Builder.foldable [ Wasm.I32Test Wasm.Eqz, Wasm.BrIf (fromIntegral outerBlockLabel) ]
+            <>
+            bodyCode
+            <>
+            Builder.singleton (Wasm.Br (fromIntegral loopBlockLabel))
+genStatement _ _ (R.StatementExpr e) = (<> Builder.singleton Wasm.Drop) <$> genExpr e
+genStatement breakLabel _ R.StatementBreak = return (Builder.singleton (Wasm.Br (fromIntegral breakLabel)))
+genStatement _ _ (R.StatementReturn Nothing) = return (Builder.singleton Wasm.Return)
+genStatement _ _ (R.StatementReturn (Just e)) = (<> Builder.singleton Wasm.Return) <$> genExpr e
+genStatement _ _ _ = Left "unimplemented"
 
 genFunction :: R.Function -> Either String WasmFunc
 genFunction (R.Function name funcType locals body) = do
-    builder <- Vector.foldM' (\acc e -> (acc <>) <$> genStatement e) Builder.empty body
+    builder <- Vector.foldM' (\acc e -> (acc <>) <$> genStatement 0 0 e) Builder.empty body
     let instrVec = Builder.build builder
         FunctionType params _ = funcType
         localVec = genLocalVec (Vector.drop (length params) locals)
