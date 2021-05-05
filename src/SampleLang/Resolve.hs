@@ -4,6 +4,7 @@ module SampleLang.Resolve
     , resolveExpr
     , resolveStatement
     , resolveLValue
+    , getExprType
     ) where
 
 import Control.Monad (mplus, unless)
