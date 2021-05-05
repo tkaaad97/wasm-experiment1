@@ -209,6 +209,7 @@ genStatement _ label0 (R.StatementWhile cond body) = do
             <>
             Builder.singleton (Wasm.Br (fromIntegral loopBlockLabel))
 genStatement _ _ (R.StatementExpr e) = (<> Builder.singleton Wasm.Drop) <$> genExpr e
+genStatement _ _ (R.StatementDecl _) = return (Builder.empty) -- todo initializer
 genStatement breakLabel _ R.StatementBreak = return (Builder.singleton (Wasm.Br (fromIntegral breakLabel)))
 genStatement _ _ (R.StatementReturn Nothing) = return (Builder.singleton Wasm.Return)
 genStatement _ _ (R.StatementReturn (Just e)) = (<> Builder.singleton Wasm.Return) <$> genExpr e
