@@ -166,10 +166,10 @@ genBinOp Ge type_ l r = Left $ "codegen error. Ge " ++ show type_ ++ " " ++ show
 genAssign :: LValue -> R.Expr -> Either String (Builder Wasm.Instr)
 genAssign (LValueLocal (LocalVarIdx idx) _) e = do
     a <- genExpr e
-    return $ a <> Builder.singleton (Wasm.LocalSet (fromIntegral idx))
+    return $ a <> Builder.singleton (Wasm.LocalTee (fromIntegral idx))
 genAssign (LValueGlobal (GlobalVarIdx idx) _) e = do
     a <- genExpr e
-    return $ a <> Builder.singleton (Wasm.GlobalSet (fromIntegral idx))
+    return $ a <> Builder.foldable [Wasm.GlobalSet (fromIntegral idx), Wasm.GlobalGet (fromIntegral idx)]
 
 genConstant :: Constant -> Builder Wasm.Instr
 genConstant (ConstInt a)      = Builder.singleton (Wasm.I32Const (fromIntegral a))
@@ -187,37 +187,34 @@ genFunctionCall (FunctionIdx idx) args = do
     xs <- Vector.foldM' (\acc e -> (acc <>) <$> genExpr e) Builder.empty args
     return $ xs <> Builder.singleton (Wasm.Call (fromIntegral idx))
 
-genStatement :: Int -> Int -> R.Statement -> Either String (Builder Wasm.Instr)
-genStatement _ label0 (R.StatementIf cond body1 body2) = do
-    let label = label0 + 1
+genStatement :: Int -> R.Statement -> Either String (Builder Wasm.Instr)
+genStatement _ (R.StatementIf cond body1 body2) = do
     condCode <- genExpr cond
-    body1Code <- Builder.build <$> Vector.foldM' (\acc e -> (acc <>) <$> genStatement label label e) Builder.empty body1
-    body2Code <- Builder.build <$> Vector.foldM' (\acc e -> (acc <>) <$> genStatement label label e) Builder.empty body2
+    body1Code <- Builder.build <$> Vector.foldM' (\acc e -> (acc <>) <$> genStatement 0 e) Builder.empty body1
+    body2Code <- Builder.build <$> Vector.foldM' (\acc e -> (acc <>) <$> genStatement 0 e) Builder.empty body2
     return (condCode <> Builder.singleton (Wasm.If Wasm.BlockTypeEmpty body1Code body2Code))
-genStatement _ label0 (R.StatementWhile cond body) = do
-    let outerBlockLabel = label0 + 1
-        loopBlockLabel = label0 + 2
+genStatement _ (R.StatementWhile cond body) = do
     condCode <- genExpr cond
-    bodyCode <- Vector.foldM' (\acc e -> (acc <>) <$> genStatement outerBlockLabel loopBlockLabel e) Builder.empty body
+    bodyCode <- Vector.foldM' (\acc e -> (acc <>) <$> genStatement 1 e) Builder.empty body
     return . Builder.singleton . Wasm.Block Wasm.BlockTypeEmpty .
         Vector.singleton . Wasm.Loop Wasm.BlockTypeEmpty . Builder.build $
             condCode
             <>
-            Builder.foldable [ Wasm.I32Test Wasm.Eqz, Wasm.BrIf (fromIntegral outerBlockLabel) ]
+            Builder.foldable [ Wasm.I32Test Wasm.Eqz, Wasm.BrIf 1 ]
             <>
             bodyCode
             <>
-            Builder.singleton (Wasm.Br (fromIntegral loopBlockLabel))
-genStatement _ _ (R.StatementExpr e) = (<> Builder.singleton Wasm.Drop) <$> genExpr e
-genStatement _ _ (R.StatementDecl _) = return (Builder.empty) -- todo initializer
-genStatement breakLabel _ R.StatementBreak = return (Builder.singleton (Wasm.Br (fromIntegral breakLabel)))
-genStatement _ _ (R.StatementReturn Nothing) = return (Builder.singleton Wasm.Return)
-genStatement _ _ (R.StatementReturn (Just e)) = (<> Builder.singleton Wasm.Return) <$> genExpr e
-genStatement _ _ _ = Left "unimplemented"
+            Builder.singleton (Wasm.Br 0)
+genStatement _ (R.StatementExpr e) = (<> Builder.singleton Wasm.Drop) <$> genExpr e
+genStatement _ (R.StatementDecl _) = return (Builder.empty) -- todo initializer
+genStatement breakLabel R.StatementBreak = return (Builder.singleton (Wasm.Br (fromIntegral breakLabel)))
+genStatement _ (R.StatementReturn Nothing) = return (Builder.singleton Wasm.Return)
+genStatement _ (R.StatementReturn (Just e)) = (<> Builder.singleton Wasm.Return) <$> genExpr e
+genStatement _ _ = Left "unimplemented"
 
 genFunction :: R.Function -> Either String WasmFunc
 genFunction (R.Function name funcType locals body) = do
-    builder <- Vector.foldM' (\acc e -> (acc <>) <$> genStatement 0 0 e) Builder.empty body
+    builder <- Vector.foldM' (\acc e -> (acc <>) <$> genStatement 0 e) Builder.empty body
     let instrVec = Builder.build builder
         FunctionType params _ = funcType
         localVec = genLocalVec (Vector.drop (length params) locals)
