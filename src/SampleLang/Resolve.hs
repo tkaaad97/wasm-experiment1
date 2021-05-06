@@ -30,18 +30,23 @@ getExprType (R.ExprFunctionCall type_ _ _) = type_
 
 resolve :: P.Ast -> Either String R.Program
 resolve ast = do
-    let gvars = pickGlobalVars ast
-        gvarVec = Vector.fromList gvars
-        gvarMap = Map.fromList . Vector.toList . Vector.imap (\i (GlobalVar name type_) -> (name, (GlobalVarIdx i, type_))) $ gvarVec
-    unless (Map.size gvarMap == Vector.length gvarVec) $ Left "global variable name duplication"
-
     let funcs = pickFunctionDefinitions ast
         funcVec = Vector.fromList funcs
         funcMap = Map.fromList . Vector.toList . Vector.imap (\i (P.FunctionDefinition name funcType _) -> (name, (FunctionIdx i, funcType))) $ funcVec
     unless (Map.size funcMap == Vector.length funcVec) $ Left "function name duplication"
 
+    let gvars = pickGlobalVars ast
+        gvarMap = Map.fromList . Vector.toList . Vector.imap (\i (GlobalVar name type_) -> (name, (GlobalVarIdx i, type_))) . Vector.fromList $ map fst gvars
+    unless (Map.size gvarMap == length gvars) $ Left "global variable name duplication"
+
     resolvedFuncVec <- Vector.mapM (resolveFunction funcMap gvarMap) funcVec
+
+    gvarVec <- Vector.mapM (resolveGVar funcMap gvarMap) . Vector.fromList $ gvars
     return (R.Program resolvedFuncVec gvarVec)
+
+resolveGVar :: Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> (GlobalVar, Maybe P.Expr) -> Either String (GlobalVar, Maybe R.Expr)
+resolveGVar _ _ (gvar, Nothing) = return (gvar, Nothing)
+resolveGVar funcMap gvarMap (gvar, Just initializer) = (,) gvar . Just <$> resolveExpr funcMap gvarMap mempty initializer
 
 resolveFunction :: Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> P.FunctionDefinition -> Either String R.Function
 resolveFunction funcMap gvarMap funcDef = do
@@ -83,6 +88,7 @@ checkStatementReturnType name (R.StatementReturn Nothing) _ = Left $ "function "
 checkStatementReturnType name (R.StatementReturn (Just e)) type_
     | getExprType e /= type_ = Left $ "function " ++ Text.unpack name ++ ": invalid return type"
     | otherwise = return ()
+checkStatementReturnType name R.StatementBreak _ = Left $ "function " ++ Text.unpack name ++ ": no return statement"
 
 resolveExpr :: Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> Map Text (LocalVarIdx, Type') -> P.Expr -> Either String R.Expr
 resolveExpr funcMap gvarMap lvarMap (P.ExprUnary op a) = do
@@ -163,12 +169,24 @@ resolveLValue gvarMap lvarMap (P.ExprReference name) = do
     maybe (Left $ "not found: " ++ Text.unpack name) return (maybeLocal `mplus` maybeGlobal)
 resolveLValue _ _ e = Left $ "not LValue: " ++ show e
 
-resolveReference ::  Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> Map Text (LocalVarIdx, Type') -> Text -> Either String Reference
+resolveLValueLocal :: Map Text (LocalVarIdx, Type') -> Text -> Either String LValue
+resolveLValueLocal lvarMap name = do
+    let maybeLocal = uncurry LValueLocal <$> Map.lookup name lvarMap
+    maybe (Left $ "not found: " ++ Text.unpack name) return maybeLocal
+
+resolveReference :: Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> Map Text (LocalVarIdx, Type') -> Text -> Either String Reference
 resolveReference funcMap gvarMap lvarMap name = do
     let maybeLocal = uncurry ReferenceLocal <$> Map.lookup name lvarMap
         maybeGlobal = uncurry ReferenceGlobal <$> Map.lookup name gvarMap
         maybeFunction = uncurry ReferenceFunction <$> Map.lookup name funcMap
     maybe (Left $ "not found: " ++ Text.unpack name) return (maybeLocal `mplus` maybeGlobal `mplus` maybeFunction)
+
+resolveLocalDeclaration :: Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> Map Text (LocalVarIdx, Type') -> P.Declaration -> Either String R.Declaration
+resolveLocalDeclaration funcMap gvarMap lvarMap (P.Declaration param initializer) = do
+    ini <- sequence $ resolveExpr funcMap gvarMap lvarMap <$> initializer
+    let Parameter pname _ = param
+    lvalue <- resolveLValueLocal lvarMap pname
+    return (R.Declaration param lvalue ini)
 
 resolveStatement :: Map Text (FunctionIdx, FunctionType) -> Map Text (GlobalVarIdx, Type') -> Map Text (LocalVarIdx, Type') -> P.Statement -> Either String R.Statement
 resolveStatement funcMap gvarMap lvarMap (P.StatementIf cond body1 body2) =
@@ -177,7 +195,8 @@ resolveStatement funcMap gvarMap lvarMap (P.StatementIf cond body1 body2) =
         (Vector.fromList <$> mapM (resolveStatement funcMap gvarMap lvarMap) body1) <*>
         (Vector.fromList <$> mapM (resolveStatement funcMap gvarMap lvarMap) body2)
 resolveStatement funcMap gvarMap lvarMap (P.StatementFor (Left pre) cond post body) =
-    R.StatementFor (Left pre) <$>
+    R.StatementFor . Left <$>
+        resolveLocalDeclaration funcMap gvarMap lvarMap pre <*>
         resolveExpr funcMap gvarMap lvarMap cond <*>
         resolveExpr funcMap gvarMap lvarMap post <*>
         (Vector.fromList <$> mapM (resolveStatement funcMap gvarMap lvarMap) body)
@@ -194,10 +213,9 @@ resolveStatement funcMap gvarMap lvarMap (P.StatementWhile cond body) =
 resolveStatement funcMap gvarMap lvarMap (P.StatementExpr e) =
     R.StatementExpr <$>
         resolveExpr funcMap gvarMap lvarMap e
-resolveStatement _ _ _ (P.StatementDecl a) =
-    return (R.StatementDecl a)
+resolveStatement funcMap gvarMap lvarMap (P.StatementDecl declaration) = R.StatementDecl <$> resolveLocalDeclaration funcMap gvarMap lvarMap declaration
 resolveStatement _ _ _ P.StatementBreak = return R.StatementBreak
-resolveStatement funcMap gvarMap lvarMap (P.StatementReturn Nothing) =
+resolveStatement _ _ _ (P.StatementReturn Nothing) =
     return (R.StatementReturn Nothing)
 resolveStatement funcMap gvarMap lvarMap (P.StatementReturn (Just e)) =
     R.StatementReturn . Just <$> resolveExpr funcMap gvarMap lvarMap e
@@ -208,11 +226,11 @@ pickFunctionDefinitions (P.Ast xs) = mapMaybe isFuncDef xs
     isFuncDef (P.Decl _)    = Nothing
     isFuncDef (P.FuncDef a) = Just a
 
-pickGlobalVars :: P.Ast -> [GlobalVar]
+pickGlobalVars :: P.Ast -> [(GlobalVar, Maybe P.Expr)]
 pickGlobalVars (P.Ast xs) = mapMaybe isDecl xs
     where
-    isDecl (P.Decl (Parameter name type_)) = Just (GlobalVar name type_)
-    isDecl (P.FuncDef _)                   = Nothing
+    isDecl (P.Decl (P.Declaration (Parameter name type_) initializer)) = Just (GlobalVar name type_, initializer)
+    isDecl (P.FuncDef _)                                               = Nothing
 
 pickLocalVars :: P.FunctionDefinition -> Vector LocalVar
 pickLocalVars (P.FunctionDefinition _ funcType statements) =
@@ -220,11 +238,12 @@ pickLocalVars (P.FunctionDefinition _ funcType statements) =
     where
     FunctionType params _ = funcType
     paramLocals = map parameterToLocalVar params
-    pick (P.StatementIf _ xs ys)             = concatMap pick (xs ++ ys)
-    pick (P.StatementFor (Left param) _ _ _) = [parameterToLocalVar param]
-    pick P.StatementFor{}                    = []
-    pick (P.StatementWhile _ xs)             = concatMap pick xs
-    pick (P.StatementExpr _)                 = []
-    pick (P.StatementDecl param)             = [parameterToLocalVar param]
-    pick (P.StatementReturn _)               = []
+    pick (P.StatementIf _ xs ys)                               = concatMap pick (xs ++ ys)
+    pick (P.StatementFor (Left (P.Declaration param _)) _ _ _) = [parameterToLocalVar param]
+    pick P.StatementFor{}                                      = []
+    pick (P.StatementWhile _ xs)                               = concatMap pick xs
+    pick (P.StatementExpr _)                                   = []
+    pick (P.StatementDecl (P.Declaration param _))             = [parameterToLocalVar param]
+    pick (P.StatementReturn _)                                 = []
+    pick P.StatementBreak                                      = []
     parameterToLocalVar (Parameter name type_) = LocalVar name type_

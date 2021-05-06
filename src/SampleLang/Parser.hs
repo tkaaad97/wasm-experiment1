@@ -28,8 +28,12 @@ type Parser = Parser.Parsec Void Text
 symbol :: Text -> Parser ()
 symbol = void . Lexer.symbol Char.space
 
+{-# INLINE parens #-}
+parens :: Parser a -> Parser a
 parens = Parser.between (symbol "(") (symbol ")")
 
+{-# INLINE braces #-}
+braces :: Parser a -> Parser a
 braces = Parser.between (symbol "{") (symbol "}")
 
 addSub :: Parser Expr
@@ -78,7 +82,7 @@ unary =
 
 postfix :: Parser Expr
 postfix =
-    Lexer.lexeme Char.space $
+    Lexer.lexeme Char.space
     primary
 
 primary :: Parser Expr
@@ -94,7 +98,7 @@ constant =
     Lexer.lexeme Char.space $
     Parser.try (ExprConstant . ConstInt <$> integer) <|>
     Parser.try (ExprConstant . ConstBool <$> bool) <|>
-    (ExprConstant . ConstDouble <$> double)
+    ExprConstant . ConstDouble <$> double
 
 integer :: Parser Int32
 integer =
@@ -140,8 +144,7 @@ equality =
         op <- Parser.choice
             [ symbol "==" $> Equ
             , symbol "/=" $> Neq]
-        b <- relational
-        return (ExprBinary op a b)
+        ExprBinary op a <$> relational
 
 relational :: Parser Expr
 relational =
@@ -153,8 +156,7 @@ relational =
                 , symbol "<=" $> Le
                 , symbol ">" $> Gt
                 , symbol ">=" $> Ge]
-            b <- addSub
-            return (ExprBinary op a b)
+            ExprBinary op a <$> addSub
 
 primitiveType :: Parser Type'
 primitiveType =
@@ -169,15 +171,23 @@ primitiveType =
     boolType = symbol "bool" $> TypeBool
     doubleType = symbol "double" $> TypeDouble
 
-declaration :: Parser Parameter
-declaration =
+parameter :: Parser Parameter
+parameter =
+    Lexer.lexeme Char.space $ do
+    t <- primitiveType
+    unless (t /= TypeVoid) $ error "cannot declare void parameter"
+    name <- identifier
+    -- todo function type
+    return (Parameter name t)
+
+declarationWithInitializer :: Parser Declaration
+declarationWithInitializer =
     Lexer.lexeme Char.space $ do
     t <- primitiveType
     unless (t /= TypeVoid) $ error "cannot declare void variable"
     name <- identifier
-    -- todo function type
-    -- todo initializer
-    return (Parameter name t)
+    initializer <- Parser.optional (symbol "=" *> expr)
+    return (Declaration (Parameter name t) initializer)
 
 statement :: Parser Statement
 statement =
@@ -202,7 +212,7 @@ statement =
     forStatement = do
         symbol "for"
         symbol "("
-        pre <- (Left <$> Parser.try declaration) <|> (Right <$> expr)
+        pre <- Left <$> Parser.try declarationWithInitializer <|> Right <$> expr
         symbol ";"
         cond <- expr
         symbol ";"
@@ -216,11 +226,11 @@ statement =
         body <- braces (Parser.many statement)
         return (StatementWhile cond body)
     declarationStatement =
-        StatementDecl <$> declaration <* symbol ";"
+        StatementDecl <$> declarationWithInitializer <* symbol ";"
     exprStatement =
         StatementExpr <$> expr <* symbol ";"
     breakStatement =
-        symbol "break" *> return StatementBreak <* symbol ";"
+        symbol "break" $> StatementBreak <* symbol ";"
     returnStatement =
         symbol "return" *> (StatementReturn <$> Parser.optional expr) <* symbol ";"
 
@@ -235,16 +245,16 @@ functionDefinition =
     return (FunctionDefinition name funcType body)
     where
     parameters = do
-        x <- declaration
-        xs <- Parser.many (symbol "," *> declaration)
+        x <- parameter
+        xs <- Parser.many (symbol "," *> parameter)
         return (x : xs)
 
 program :: Parser Ast
 program =
     fmap Ast . Lexer.lexeme Char.space . Parser.many $
-        Parser.try globalVarDecl <|> (FuncDef <$> functionDefinition)
+        Parser.try globalVarDecl <|> FuncDef <$> functionDefinition
     where
-    globalVarDecl = Decl <$> (declaration <* symbol ";")
+    globalVarDecl = Decl <$> (declarationWithInitializer <* symbol ";")
 
 parseProgram :: Text -> Either String Ast
 parseProgram input = either (Left . Parser.errorBundlePretty) return $ Parser.parse program "Ast" input

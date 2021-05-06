@@ -4,6 +4,7 @@ module SampleLang.Ast.Parsed
     , Parameter(..)
     , Constant(..)
     , Ast(..)
+    , Declaration(..)
     , DeclOrFuncDef(..)
     , Expr(..)
     , UnOp(..)
@@ -18,8 +19,11 @@ import SampleLang.Ast.Types
 newtype Ast = Ast [DeclOrFuncDef]
     deriving (Show, Eq)
 
+data Declaration = Declaration !Parameter !(Maybe Expr)
+    deriving (Show, Eq)
+
 data DeclOrFuncDef =
-    Decl !Parameter |
+    Decl !Declaration |
     FuncDef !FunctionDefinition
     deriving (Show, Eq)
 
@@ -32,14 +36,14 @@ data Expr =
     ExprFunctionCall !Text ![Expr]
     deriving (Show, Eq)
 
-type DeclOrExpr = Either Parameter Expr
+type DeclOrExpr = Either Declaration Expr
 
 data Statement =
     StatementIf !Expr ![Statement] ![Statement] |
     StatementFor !DeclOrExpr !Expr !Expr ![Statement] |
     StatementWhile !Expr ![Statement] |
     StatementExpr !Expr |
-    StatementDecl !Parameter |
+    StatementDecl !Declaration |
     StatementReturn !(Maybe Expr) |
     StatementBreak
     deriving (Show, Eq)

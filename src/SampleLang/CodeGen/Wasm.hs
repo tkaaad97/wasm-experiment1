@@ -40,9 +40,10 @@ genExpr (R.ExprConstant _ a)            = return (genConstant a)
 genExpr (R.ExprReference _ a)           = return (genReference a)
 genExpr (R.ExprFunctionCall _ idx args) = genFunctionCall idx args
 
-genDeclOrExpr :: Either Parameter R.Expr -> Either String (Builder Wasm.Instr)
-genDeclOrExpr (Left _)  = return Builder.empty
-genDeclOrExpr (Right e) = genExpr e
+genDeclOrExpr :: Either R.Declaration R.Expr -> Either String (Builder Wasm.Instr)
+genDeclOrExpr (Left (R.Declaration _ _ Nothing)) = return Builder.empty
+genDeclOrExpr (Left (R.Declaration _ lvalue (Just initializer))) = genAssign lvalue initializer
+genDeclOrExpr (Right e)                            = genExpr e
 
 genUnOp :: UnOp -> Type' -> R.Expr -> Either String (Builder Wasm.Instr)
 genUnOp Negate TypeInt e = do
@@ -233,7 +234,8 @@ genStatement _ (R.StatementFor pre cond post body) = do
             Builder.singleton (Wasm.Br 0)
         )
 genStatement _ (R.StatementExpr e) = (<> Builder.singleton Wasm.Drop) <$> genExpr e
-genStatement _ (R.StatementDecl _) = return Builder.empty -- todo initializer
+genStatement _ (R.StatementDecl (R.Declaration _ _ Nothing)) = return Builder.empty
+genStatement _ (R.StatementDecl (R.Declaration _ lvalue (Just initializer))) = genAssign lvalue initializer
 genStatement breakLabel R.StatementBreak = return (Builder.singleton (Wasm.Br (fromIntegral breakLabel)))
 genStatement _ (R.StatementReturn Nothing) = return (Builder.singleton Wasm.Return)
 genStatement _ (R.StatementReturn (Just e)) = (<> Builder.singleton Wasm.Return) <$> genExpr e

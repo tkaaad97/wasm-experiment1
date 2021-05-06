@@ -1,5 +1,6 @@
 module SampleLang.Ast.Resolved
     ( Expr(..)
+    , Declaration(..)
     , UnOp(..)
     , BinOp(..)
     , LValue(..)
@@ -21,14 +22,17 @@ data Expr =
     ExprFunctionCall !Type' !FunctionIdx !(Vector Expr)
     deriving (Show, Eq)
 
-type DeclOrExpr = Either Parameter Expr
+data Declaration = Declaration !Parameter !LValue !(Maybe Expr)
+    deriving (Show, Eq)
+
+type DeclOrExpr = Either Declaration Expr
 
 data Statement =
     StatementIf !Expr !(Vector Statement) !(Vector Statement) |
     StatementFor !DeclOrExpr !Expr !Expr !(Vector Statement) |
     StatementWhile !Expr !(Vector Statement) |
     StatementExpr !Expr |
-    StatementDecl !Parameter |
+    StatementDecl !Declaration |
     StatementReturn !(Maybe Expr) |
     StatementBreak
     deriving (Show, Eq)
@@ -42,5 +46,5 @@ data Function = Function
 
 data Program = Program
     { programFunctions  :: !(Vector Function)
-    , programGlobalVars :: !(Vector GlobalVar)
+    , programGlobalVars :: !(Vector (GlobalVar, Maybe Expr))
     } deriving (Show, Eq)
