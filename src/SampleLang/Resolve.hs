@@ -58,6 +58,15 @@ resolveFunction funcMap gvarMap funcDef = do
     localVarVec = pickLocalVars funcDef
     lvarMap = Map.fromList . Vector.toList . Vector.imap (\i (LocalVar vname type_) -> (vname, (LocalVarIdx i, type_))) $ localVarVec
 
+checkFunctionCallType :: Text -> FunctionType -> Vector R.Expr -> Either String ()
+checkFunctionCallType name (FunctionType params _) args = do
+    unless (Vector.length args == length params) . Left $ "wrong argument number. function: " ++ Text.unpack name
+    mapM_ checkArgumentType (zip params . Vector.toList $ args)
+    where
+    checkArgumentType (Parameter pname type_, e)
+        | getExprType e == type_ = return ()
+        | otherwise = Left $ "wrong argument type. function: " ++ Text.unpack name ++ " argument: " ++ Text.unpack pname
+
 checkReturnType :: Text -> Type' -> Vector R.Statement -> Either String ()
 checkReturnType name TypeVoid body
     | Vector.null body = return ()
@@ -114,7 +123,7 @@ resolveExpr funcMap gvarMap lvarMap (P.ExprReference name) = do
 resolveExpr funcMap gvarMap lvarMap (P.ExprFunctionCall name args) = do
     (funcIdx, funcType) <- maybe (Left $ "function not found: " ++ Text.unpack name) return $ Map.lookup name funcMap
     args' <- Vector.fromList <$> mapM (resolveExpr funcMap gvarMap lvarMap) args
-    -- todo check argments type
+    checkFunctionCallType name funcType args'
     return (R.ExprFunctionCall (getResultType funcType) funcIdx args')
 
 resolveUnOpType :: UnOp -> Type' -> Either String Type'

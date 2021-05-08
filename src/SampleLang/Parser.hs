@@ -89,8 +89,7 @@ primary :: Parser Expr
 primary =
     Lexer.lexeme Char.space $
     Parser.try constant <|>
-    --functionCall <|>
-    Parser.try reference <|>
+    Parser.try referenceOrFunctionCall <|>
     parens expr
 
 constant :: Parser Expr
@@ -110,8 +109,17 @@ bool = symbol "true" $> True <|> symbol "false" $> False
 double :: Parser Double
 double = Lexer.float
 
-reference :: Parser Expr
-reference = ExprReference <$> identifier
+referenceOrFunctionCall :: Parser Expr
+referenceOrFunctionCall = do
+    name <- identifier
+    Parser.option (ExprReference name) (functionCall name)
+    where
+    functionCall name =
+        ExprFunctionCall name <$> parens (Parser.try arguments <|> return [])
+    arguments = do
+        x <- expr
+        xs <- Parser.many (symbol "," *> expr)
+        return (x : xs)
 
 identifierStartChar :: Parser Char
 identifierStartChar = Parser.satisfy (\a -> isAsciiUpper a || isAsciiLower a || a == '_')
