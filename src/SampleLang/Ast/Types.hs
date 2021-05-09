@@ -8,6 +8,7 @@ module SampleLang.Ast.Types
     , FunctionIdx(..)
     , GlobalVarIdx(..)
     , LocalVarIdx(..)
+    , StringIdx(..)
     , GlobalVar(..)
     , LocalVar(..)
     , LValue(..)
@@ -26,6 +27,7 @@ data Type' =
     TypeInt |
     TypeBool |
     TypeDouble |
+    TypeString |
     TypeFunction !FunctionType
     deriving (Show, Eq)
 
@@ -71,6 +73,10 @@ newtype GlobalVarIdx = GlobalVarIdx
 
 newtype LocalVarIdx = LocalVarIdx
     { unLocalVarIdx :: Int
+    } deriving (Show, Eq)
+
+newtype StringIdx = StringIdx
+    { unStringIdx :: Int
     } deriving (Show, Eq)
 
 data GlobalVar = GlobalVar !Text !Type'

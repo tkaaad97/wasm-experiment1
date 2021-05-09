@@ -17,11 +17,12 @@ import Data.Void (Void)
 import SampleLang.Ast.Parsed
 import Text.Megaparsec ((<|>))
 import qualified Text.Megaparsec as Parser (Parsec, between, choice,
-                                            errorBundlePretty, many, option,
-                                            optional, parse, satisfy, try)
-import qualified Text.Megaparsec.Char as Char (space)
-import qualified Text.Megaparsec.Char.Lexer as Lexer (decimal, float, lexeme,
-                                                      symbol)
+                                            errorBundlePretty, many, manyTill,
+                                            option, optional, parse, satisfy,
+                                            try)
+import qualified Text.Megaparsec.Char as Char (char, space)
+import qualified Text.Megaparsec.Char.Lexer as Lexer (charLiteral, decimal,
+                                                      float, lexeme, symbol)
 
 type Parser = Parser.Parsec Void Text
 
@@ -90,6 +91,7 @@ primary =
     Lexer.lexeme Char.space $
     Parser.try constant <|>
     Parser.try referenceOrFunctionCall <|>
+    Parser.try stringLiteral <|>
     parens expr
 
 constant :: Parser Expr
@@ -120,6 +122,11 @@ referenceOrFunctionCall = do
         x <- expr
         xs <- Parser.many (symbol "," *> expr)
         return (x : xs)
+
+stringLiteral :: Parser Expr
+stringLiteral = do
+    str <- Char.char '"' >> Parser.manyTill Lexer.charLiteral (Char.char '"')
+    return (ExprStringLiteral . Text.pack $ str)
 
 identifierStartChar :: Parser Char
 identifierStartChar = Parser.satisfy (\a -> isAsciiUpper a || isAsciiLower a || a == '_')
@@ -172,12 +179,14 @@ primitiveType =
     Parser.try voidType <|>
     Parser.try intType <|>
     Parser.try boolType <|>
-    doubleType
+    Parser.try doubleType <|>
+    stringType
     where
     voidType = symbol "void" $> TypeVoid
     intType = symbol "int" $> TypeInt
     boolType = symbol "bool" $> TypeBool
     doubleType = symbol "double" $> TypeDouble
+    stringType = symbol "string" $> TypeString
 
 parameter :: Parser Parameter
 parameter =

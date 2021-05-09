@@ -33,7 +33,8 @@ data Expr =
     ExprAssign !Expr !Expr |
     ExprConstant !Constant |
     ExprReference !Text |
-    ExprFunctionCall !Text ![Expr]
+    ExprFunctionCall !Text ![Expr] |
+    ExprStringLiteral !Text
     deriving (Show, Eq)
 
 type DeclOrExpr = Either Declaration Expr

@@ -11,6 +11,7 @@ module SampleLang.Ast.Resolved
 
 import Data.Text (Text)
 import Data.Vector (Vector)
+import Data.Word (Word64)
 import SampleLang.Ast.Types
 
 data Expr =
@@ -19,7 +20,8 @@ data Expr =
     ExprAssign !Type' !LValue !Expr |
     ExprConstant !Type' !Constant |
     ExprReference !Type' !Reference |
-    ExprFunctionCall !Type' !FunctionIdx !(Vector Expr)
+    ExprFunctionCall !Type' !FunctionIdx !(Vector Expr) |
+    ExprStringLiteral !Word64
     deriving (Show, Eq)
 
 data Declaration = Declaration !Parameter !LValue !(Maybe Expr)
@@ -45,6 +47,7 @@ data Function = Function
     } deriving (Show, Eq)
 
 data Program = Program
-    { programFunctions  :: !(Vector Function)
-    , programGlobalVars :: !(Vector (GlobalVar, Maybe Expr))
+    { programFunctions      :: !(Vector Function)
+    , programStringLiterals :: !(Vector (Text, Word64))
+    , programGlobalVars     :: !(Vector (GlobalVar, Maybe Expr))
     } deriving (Show, Eq)

@@ -20,7 +20,7 @@ import qualified Wasm.Types as Wasm
 data WasmFunc = WasmFunc !Text !Wasm.FuncType !(Vector Wasm.ValType) !(Vector Wasm.Instr)
 
 gen :: R.Program -> Either String Wasm.Module
-gen (R.Program funcs _) = do
+gen (R.Program funcs _ _) = do
     wasmFuncVec <- Vector.mapM genFunction funcs
     let typeVec = Vector.map (\(WasmFunc _ type_ _ _) -> type_) wasmFuncVec
         funcVec = Vector.imap (\i (WasmFunc _ _ locals instrVec) -> Wasm.Func (fromIntegral i) locals instrVec) wasmFuncVec
@@ -39,6 +39,7 @@ genExpr (R.ExprAssign _ l r)            = genAssign l r
 genExpr (R.ExprConstant _ a)            = return (genConstant a)
 genExpr (R.ExprReference _ a)           = return (genReference a)
 genExpr (R.ExprFunctionCall _ idx args) = genFunctionCall idx args
+genExpr (R.ExprStringLiteral offLen)    = return (Builder.singleton (Wasm.I64Const offLen))
 
 genDeclOrExpr :: Either R.Declaration R.Expr -> Either String (Builder Wasm.Instr)
 genDeclOrExpr (Left (R.Declaration _ _ Nothing)) = return Builder.empty
@@ -265,4 +266,5 @@ toValType TypeVoid       = Wasm.NumType Wasm.I32
 toValType TypeInt        = Wasm.NumType Wasm.I32
 toValType TypeBool       = Wasm.NumType Wasm.I32
 toValType TypeDouble     = Wasm.NumType Wasm.F64
+toValType TypeString     = Wasm.NumType Wasm.I64
 toValType TypeFunction{} = Wasm.RefType Wasm.FuncRef
