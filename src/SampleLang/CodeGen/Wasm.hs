@@ -5,6 +5,7 @@ module SampleLang.CodeGen.Wasm
     , gen
     ) where
 
+import Data.Bits ((.|.))
 import Data.Text (Text)
 import Data.Vector (Vector)
 import qualified Data.Vector as Vector (drop, foldM', fromList, imap, map, mapM,
@@ -20,15 +21,17 @@ import qualified Wasm.Types as Wasm
 data WasmFunc = WasmFunc !Text !Wasm.FuncType !(Vector Wasm.ValType) !(Vector Wasm.Instr)
 
 gen :: R.Program -> Either String Wasm.Module
-gen (R.Program funcs _ _) = do
+gen (R.Program funcs strs _) = do
     wasmFuncVec <- Vector.mapM genFunction funcs
     let typeVec = Vector.map (\(WasmFunc _ type_ _ _) -> type_) wasmFuncVec
         funcVec = Vector.imap (\i (WasmFunc _ _ locals instrVec) -> Wasm.Func (fromIntegral i) locals instrVec) wasmFuncVec
         exportVec = Vector.imap (\i (WasmFunc name _ _ _) -> Wasm.Export name (Wasm.ExportFunc (fromIntegral i))) wasmFuncVec
+        dataVec = Vector.map (\(s, offLen) -> Wasm.DataSegment s . Just . fromIntegral $ offLen .|. 0xFFFF) strs
         wasm = Wasm.Module
             { Wasm.moduleFuncs = funcVec
             , Wasm.moduleTypes = typeVec
             , Wasm.moduleExports = exportVec
+            , Wasm.moduleDatas = dataVec
             }
     return wasm
 

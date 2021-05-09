@@ -22,16 +22,17 @@ intercalateBuilder x xs = mconcat (intersperse x xs)
 
 buildModule :: Module -> Builder
 buildModule m =
-    intercalateBuilder "\n  " (["(module"] ++ buildTypes types ++ buildFuncs types funcs ++ buildExports exports)
+    intercalateBuilder "\n  " (["(module"] ++ buildTypes types ++ buildFuncs types funcs ++ buildExports exports ++ buildDataSegments datas)
     <>
     "\n)\n"
     where
     funcs = moduleFuncs m
     types = moduleTypes m
     exports = moduleExports m
+    datas = moduleDatas m
 
-buildIndex :: Int -> Builder
-buildIndex i =
+buildIndexComment :: Int -> Builder
+buildIndexComment i =
     mconcat ["(;", Builder.decimal i, ";)"]
 
 buildTypes :: Vector FuncType -> [Builder]
@@ -41,7 +42,7 @@ buildType :: Int -> FuncType -> Builder
 buildType typeidx (FuncType (ResultType params) (ResultType results)) =
     intercalateBuilder " "
     [ "(type"
-    , buildIndex typeidx
+    , buildIndexComment typeidx
     , buildFuncType params results
     ]
     <>
@@ -90,7 +91,7 @@ buildFuncs types = Vector.toList . Vector.imap f
 buildFunc :: FuncType -> Int -> Func -> Builder
 buildFunc (FuncType (ResultType params) (ResultType results)) funcidx (Func typeidx locals body) =
     intercalateBuilder "\n"
-        ( [ intercalateBuilder " " $ ["(func", buildIndex funcidx, "(type " <> Builder.decimal typeidx <> ")"] ++
+        ( [ intercalateBuilder " " $ ["(func", buildIndexComment funcidx, "(type " <> Builder.decimal typeidx <> ")"] ++
               [ buildParam params | not (null params) ] ++
               [ buildResult results | not (null results) ]
           ] ++
@@ -248,3 +249,10 @@ buildExport (Export name (ExportFunc idx)) = mconcat ["(export \"", Builder.from
 buildExport (Export name (ExportTable idx)) = mconcat ["(export \"", Builder.fromText name, "\" (table ", Builder.decimal idx, "))"]
 buildExport (Export name (ExportMemory idx)) = mconcat ["(export \"", Builder.fromText name, "\" (mem ", Builder.decimal idx, "))"]
 buildExport (Export name (ExportGlobal idx)) = mconcat ["(export \"", Builder.fromText name, "\" (global ", Builder.decimal idx, "))"]
+
+buildDataSegments :: Vector DataSegment -> [Builder]
+buildDataSegments = Vector.toList . Vector.imap buildDataSegment
+
+buildDataSegment :: Int -> DataSegment -> Builder
+buildDataSegment i (DataSegment s Nothing) = mconcat ["(data ", buildIndexComment i, " \"", Builder.fromText s, "\")"]
+buildDataSegment i (DataSegment s (Just off)) = mconcat ["(data ", buildIndexComment i, " (i32.const ", Builder.decimal off ,") ", "\"", Builder.fromText s, "\")"]

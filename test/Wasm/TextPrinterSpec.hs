@@ -16,24 +16,27 @@ import Wasm.Types
 modules :: [(String, Module)]
 modules =
     [ ( "empty-module"
-      , Module mempty mempty mempty
+      , Module mempty mempty mempty mempty
       ),
       ( "module1"
       , Module
         (Vector.singleton (FuncType (ResultType $ Vector.fromList [NumType I32, NumType I32]) (ResultType $ Vector.fromList [NumType I32])))
         (Vector.singleton (Func 0 mempty $ Vector.fromList [LocalGet 0, LocalGet 1, I32Binary IAdd]))
+        mempty
         (Vector.singleton (Export "add" (ExportFunc 0)))
       ),
       ( "module-has-block"
       , Module
         (Vector.singleton (FuncType (ResultType mempty) (ResultType . Vector.singleton $ NumType I32)))
         (Vector.singleton (Func 0 mempty $ Vector.fromList [Block (BlockTypeFuncType (FuncType (ResultType mempty) (ResultType . Vector.singleton $ NumType I32))) (Vector.fromList [I32Const 0, Block (BlockTypeFuncType (FuncType (ResultType mempty) (ResultType . Vector.singleton $ NumType I32))) (Vector.fromList [I32Const 0, I32Const 1, I32Binary IAdd]), I32Binary IAdd])]))
+        mempty
         (Vector.singleton (Export "blockfunc" (ExportFunc 0)))
       ),
       ( "module-has-if"
       , Module
         (Vector.singleton (FuncType (ResultType . Vector.fromList $ [NumType I32, NumType I32]) (ResultType . Vector.singleton $ NumType I32)))
         (Vector.singleton (Func 0 mempty $ Vector.fromList [LocalGet 0, LocalGet 1, I32Relation IEq, If (BlockTypeFuncType (FuncType (ResultType mempty) (ResultType . Vector.singleton $ NumType I32))) (Vector.singleton (I32Const 0)) (Vector.singleton (I32Const 100))]))
+        mempty
         (Vector.singleton (Export "iffunc" (ExportFunc 0)))
       ),
       ( "module-loop-br"
@@ -60,6 +63,7 @@ modules =
             , Return
             ])
         )
+        mempty
         (Vector.singleton (Export "sum" (ExportFunc 0)))
       )
     ]

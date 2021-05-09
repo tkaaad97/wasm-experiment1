@@ -23,7 +23,7 @@ case1 = R.Program (Vector.singleton func1) mempty mempty
         R.ExprBinary TypeInt Add (R.ExprReference TypeInt (ReferenceLocal (LocalVarIdx 0) TypeInt)) (R.ExprReference TypeInt (ReferenceLocal (LocalVarIdx 1) TypeInt))
 
 expected1 :: Wasm.Module
-expected1 = Wasm.Module types funcs exports
+expected1 = Wasm.Module types funcs mempty exports
     where
     types = Vector.singleton $ Wasm.FuncType (Wasm.ResultType (Vector.fromList [Wasm.NumType Wasm.I32, Wasm.NumType Wasm.I32])) (Wasm.ResultType mempty)
     funcs = Vector.singleton $ Wasm.Func 0 mempty (Vector.fromList [Wasm.LocalGet 0, Wasm.LocalGet 1, Wasm.I32Binary Wasm.IAdd, Wasm.Drop])

@@ -7,6 +7,7 @@ module Wasm.Types
     , ValType(..)
     , ResultType(..)
     , FuncType(..)
+    , DataSegment(..)
     , BlockType(..)
     , IUnop(..)
     , IBinop(..)
@@ -29,7 +30,7 @@ data Module = Module
     --, moduleGlobals :: !(Vector Global)
     --, moduleTables   :: !(Vector Table)
     --, moduleMemories :: !(Vector Memory)
-    --, moduleDatas    :: !(Vector DataSegment)
+    , moduleDatas   :: !(Vector DataSegment)
     --, moduleImports  :: !(Vector Import)
     , moduleExports :: !(Vector Export)
     } deriving (Show, Eq)
@@ -62,6 +63,9 @@ data Func = Func
     , funcLocals :: !(Vector ValType)
     , funcBody   :: !(Vector Instr)
     } deriving (Show, Eq)
+
+data DataSegment = DataSegment !Text !(Maybe Word32) -- todo offset instr*
+    deriving (Show, Eq)
 
 data BlockType =
     BlockTypeIdx !Word32 |
