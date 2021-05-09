@@ -14,7 +14,7 @@ import qualified Data.Text.Lazy.Builder as Builder (fromString, fromText,
 import qualified Data.Text.Lazy.Builder.Int as Builder (decimal)
 import qualified Data.Text.Lazy.Builder.RealFloat as Builder (realFloat)
 import Data.Vector (Vector)
-import qualified Data.Vector as Vector (imap, map, toList, (!))
+import qualified Data.Vector as Vector (imap, map, null, toList, (!))
 import Wasm.Types
 
 printText :: Module -> Text
@@ -254,11 +254,13 @@ buildExport (Export name (ExportMemory idx)) = mconcat ["(export \"", Builder.fr
 buildExport (Export name (ExportGlobal idx)) = mconcat ["(export \"", Builder.fromText name, "\" (global ", Builder.decimal idx, "))"]
 
 buildDataSegments :: Vector DataSegment -> [Builder]
-buildDataSegments = Vector.toList . Vector.imap buildDataSegment
+buildDataSegments xs
+    | Vector.null xs = []
+    | otherwise = "(memory 1)" : Vector.toList (Vector.imap buildDataSegment xs)
 
 buildDataSegment :: Int -> DataSegment -> Builder
-buildDataSegment i (DataSegment s Nothing) = mconcat ["(data ", buildIndexComment i, " ", buildStringLiteral s]
-buildDataSegment i (DataSegment s (Just off)) = mconcat ["(data ", buildIndexComment i, " (i32.const ", Builder.decimal off ,") ", buildStringLiteral s]
+buildDataSegment i (DataSegment s Nothing) = mconcat ["(data ", buildIndexComment i, " ", buildStringLiteral s, ")"]
+buildDataSegment i (DataSegment s (Just off)) = mconcat ["(data ", buildIndexComment i, " (i32.const ", Builder.decimal off ,") ", buildStringLiteral s, ")"]
 
 buildStringLiteral :: Text -> Builder
 buildStringLiteral s = "\"" <> Builder.fromString (Text.foldl' (\a c -> a . Char.showLitChar c) id s "") <> "\""

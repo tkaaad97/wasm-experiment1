@@ -173,6 +173,21 @@ relational =
                 , symbol ">=" $> Ge]
             ExprBinary op a <$> addSub
 
+voidType :: Parser Type'
+voidType = symbol "void" $> TypeVoid
+
+intType :: Parser Type'
+intType = symbol "int" $> TypeInt
+
+boolType :: Parser Type'
+boolType = symbol "bool" $> TypeBool
+
+doubleType :: Parser Type'
+doubleType = symbol "double" $> TypeDouble
+
+stringType :: Parser Type'
+stringType = symbol "string" $> TypeString
+
 primitiveType :: Parser Type'
 primitiveType =
     Lexer.lexeme Char.space $
@@ -181,18 +196,19 @@ primitiveType =
     Parser.try boolType <|>
     Parser.try doubleType <|>
     stringType
-    where
-    voidType = symbol "void" $> TypeVoid
-    intType = symbol "int" $> TypeInt
-    boolType = symbol "bool" $> TypeBool
-    doubleType = symbol "double" $> TypeDouble
-    stringType = symbol "string" $> TypeString
+
+unvoidPrimitiveType :: Parser Type'
+unvoidPrimitiveType =
+    Lexer.lexeme Char.space $
+    Parser.try intType <|>
+    Parser.try boolType <|>
+    Parser.try doubleType <|>
+    stringType
 
 parameter :: Parser Parameter
 parameter =
     Lexer.lexeme Char.space $ do
-    t <- primitiveType
-    unless (t /= TypeVoid) $ error "cannot declare void parameter"
+    t <- unvoidPrimitiveType
     name <- identifier
     -- todo function type
     return (Parameter name t)
@@ -200,8 +216,7 @@ parameter =
 declarationWithInitializer :: Parser Declaration
 declarationWithInitializer =
     Lexer.lexeme Char.space $ do
-    t <- primitiveType
-    unless (t /= TypeVoid) $ error "cannot declare void variable"
+    t <- unvoidPrimitiveType
     name <- identifier
     initializer <- Parser.optional (symbol "=" *> expr)
     return (Declaration (Parameter name t) initializer)
