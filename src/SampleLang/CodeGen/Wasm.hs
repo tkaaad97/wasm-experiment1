@@ -237,7 +237,9 @@ genStatement _ (R.StatementFor pre cond post body) = do
             <>
             Builder.singleton (Wasm.Br 0)
         )
-genStatement _ (R.StatementExpr e) = (<> Builder.singleton Wasm.Drop) <$> genExpr e
+genStatement _ (R.StatementExpr e)
+    | R.getExprType e == TypeVoid = genExpr e
+    | otherwise = (<> Builder.singleton Wasm.Drop) <$> genExpr e
 genStatement _ (R.StatementDecl (R.Declaration _ _ Nothing)) = return Builder.empty
 genStatement _ (R.StatementDecl (R.Declaration _ lvalue (Just initializer))) = genAssign lvalue initializer
 genStatement breakLabel R.StatementBreak = return (Builder.singleton (Wasm.Br (fromIntegral breakLabel)))
