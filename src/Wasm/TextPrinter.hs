@@ -3,11 +3,14 @@ module Wasm.TextPrinter
     ( printText
     ) where
 
+import qualified Data.Char as Char (showLitChar)
 import Data.List (intersperse)
 import Data.Text (Text)
+import qualified Data.Text as Text (foldl')
 import qualified Data.Text.Lazy as Text (toStrict)
 import Data.Text.Lazy.Builder (Builder)
-import qualified Data.Text.Lazy.Builder as Builder (fromText, toLazyText)
+import qualified Data.Text.Lazy.Builder as Builder (fromString, fromText,
+                                                    toLazyText)
 import qualified Data.Text.Lazy.Builder.Int as Builder (decimal)
 import qualified Data.Text.Lazy.Builder.RealFloat as Builder (realFloat)
 import Data.Vector (Vector)
@@ -254,5 +257,8 @@ buildDataSegments :: Vector DataSegment -> [Builder]
 buildDataSegments = Vector.toList . Vector.imap buildDataSegment
 
 buildDataSegment :: Int -> DataSegment -> Builder
-buildDataSegment i (DataSegment s Nothing) = mconcat ["(data ", buildIndexComment i, " \"", Builder.fromText s, "\")"]
-buildDataSegment i (DataSegment s (Just off)) = mconcat ["(data ", buildIndexComment i, " (i32.const ", Builder.decimal off ,") ", "\"", Builder.fromText s, "\")"]
+buildDataSegment i (DataSegment s Nothing) = mconcat ["(data ", buildIndexComment i, " ", buildStringLiteral s]
+buildDataSegment i (DataSegment s (Just off)) = mconcat ["(data ", buildIndexComment i, " (i32.const ", Builder.decimal off ,") ", buildStringLiteral s]
+
+buildStringLiteral :: Text -> Builder
+buildStringLiteral s = "\"" <> Builder.fromString (Text.foldl' (\a c -> a . Char.showLitChar c) id s "") <> "\""

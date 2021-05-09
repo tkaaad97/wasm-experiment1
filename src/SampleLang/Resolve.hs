@@ -8,7 +8,7 @@ module SampleLang.Resolve
     ) where
 
 import Control.Monad (mplus, unless)
-import Data.Bits ((.&.))
+import Data.Bits ((.&.), (.|.))
 import qualified Data.Bits as Bits (shift)
 import qualified Data.ByteString as ByteString (length)
 import Data.Containers.ListUtils (nubOrd)
@@ -22,7 +22,7 @@ import Data.Traversable (mapAccumL)
 import Data.Vector (Vector)
 import qualified Data.Vector as Vector (find, fromList, imap, last, length, map,
                                         mapM, null, toList)
-import Data.Word (Word32, Word64)
+import Data.Word (Word64)
 import qualified SampleLang.Ast.Parsed as P
 import qualified SampleLang.Ast.Resolved as R
 import SampleLang.Ast.Types
@@ -275,8 +275,8 @@ pickStringLiterals :: P.Ast -> Vector (Text, Word64)
 pickStringLiterals (P.Ast xs) = snd . mapAccumL f 0 . Vector.fromList . nubOrd . catMaybes . concatMap pick $ xs
     where
     f off s =
-        let len = textByteSize s :: Word32
-        in (off + len, (s, Bits.shift (fromIntegral len) 32 .&. fromIntegral off))
+        let len = textByteSize s :: Word64
+        in (off + len, (s, Bits.shift len 32 .|. (off .&. 0xFFFF)))
     textByteSize = fromIntegral . ByteString.length . Text.encodeUtf8
 
     pick (P.Decl (P.Declaration _ ini))              = maybe [] pickE ini
