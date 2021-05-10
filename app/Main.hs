@@ -4,9 +4,25 @@ import Control.Exception (throwIO)
 import Control.Monad (unless)
 import qualified Data.ByteString as ByteString (length, readFile)
 import qualified Data.ByteString.Unsafe as ByteString (unsafeUseAsCString)
+import Data.Word (Word32)
+import Foreign (FunPtr, Ptr)
 import qualified Foreign
-import qualified Foreign.C.String as Foreign (peekCStringLen)
+import qualified Foreign.C.String as Foreign (newCString, peekCStringLen)
+import Foreign.C.Types (CChar)
 import Wasmtime.Raw
+
+foreign import ccall "printf" printfI32I32 :: Ptr () -> Word32 -> Word32 -> IO ()
+
+foreign import ccall "wrapper" createCallbackPtr :: (Ptr WasmValVecT -> Ptr WasmValVecT -> IO (Ptr WasmTrapT)) -> IO (FunPtr (Ptr WasmValVecT -> Ptr WasmValVecT -> IO (Ptr WasmTrapT)))
+
+callback :: Ptr CChar -> Ptr WasmValVecT -> Ptr WasmValVecT -> IO (Ptr WasmTrapT)
+callback mem paramVecPtr _ = do
+    WasmValVecT _ p <- Foreign.peek paramVecPtr
+    WasmValI32 off <- Foreign.peek p
+    WasmValI32 a <- Foreign.peekElemOff p 1
+    WasmValI32 b <- Foreign.peekElemOff p 2
+    printfI32I32 (mem `Foreign.plusPtr` fromIntegral off) a b
+    return Foreign.nullPtr
 
 printWasmtimeError :: Foreign.Ptr WasmtimeErrorT -> IO ()
 printWasmtimeError err
@@ -52,13 +68,27 @@ main = do
 
     putStrLn "module new"
 
-    externVec <- Foreign.malloc
-    Foreign.poke externVec (WasmExternVecT 0 Foreign.nullPtr)
+    i32 <- wasmValTypeNew wasmValKindI32
+    paramTypeVec <- Foreign.malloc
+    Foreign.withArray [i32, i32, i32] $ \params ->
+        wasmValTypeVecNew paramTypeVec 3 params
+    resultTypeVec <- Foreign.malloc
+    wasmValTypeVecNewEmpty resultTypeVec
+    funcType <- wasmFuncTypeNew paramTypeVec resultTypeVec
+
+    mem <- Foreign.newCString "0123456789\0first: %d, second: %d\n\0aaaa"
+    callbackPtr <- createCallbackPtr (callback mem)
+    importFunc <- wasmFuncNew store funcType callbackPtr
+    unless (importFunc /= Foreign.nullPtr) $ error "importFunc is null"
+    importFuncExtern <- wasmFuncAsExtern importFunc
+    unless (importFuncExtern /= Foreign.nullPtr) $ error "importFuncExtern is null"
+    importVec <- Foreign.malloc
+    Foreign.with importFuncExtern $ wasmExternVecNew importVec 1
 
     (err2, instance_) <-
         Foreign.alloca $ \pp ->
         Foreign.alloca $ \trap -> do
-            err2 <- wasmtimeInstanceNew store module_ externVec pp trap
+            err2 <- wasmtimeInstanceNew store module_ importVec pp trap
             instance_ <- Foreign.peek pp
             return (err2, instance_)
     putStrLn "instance new"

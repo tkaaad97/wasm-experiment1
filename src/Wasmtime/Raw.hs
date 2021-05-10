@@ -5,12 +5,21 @@ module Wasmtime.Raw
     , WasmExternVecT(..)
     , WasmValT(..)
     , WasmValVecT(..)
+    , WasmTrapT
     , WasmtimeErrorT
+    , wasmValKindI32
+    , wasmValKindI64
+    , wasmValKindF32
+    , wasmValKindF64
+    , wasmValKindAnyRef
+    , wasmValKindFuncRef
     , wasmByteVecDelete
     , wasmByteVecNewUninitialized
     , wasmEngineNew
     , wasmExternAsFunc
+    , wasmExternVecNew
     , wasmExternVecDelete
+    , wasmFuncAsExtern
     , wasmFuncNew
     , wasmFuncTypeNew
     , wasmInstanceDelete
@@ -25,6 +34,7 @@ module Wasmtime.Raw
     , wasmValTypeNew
     , wasmValTypeVecDelete
     , wasmValTypeVecNew
+    , wasmValTypeVecNewEmpty
     , wasmValTypeVecNewUninitialized
     , wasmtimeErrorDelete
     , wasmtimeErrorMessage
@@ -203,8 +213,10 @@ foreign import ccall "wasm_byte_vec_delete" wasmByteVecDelete :: Ptr WasmByteVec
 foreign import ccall "wasm_byte_vec_new_uninitialized" wasmByteVecNewUninitialized :: Ptr WasmByteVecT -> Word32 -> IO ()
 foreign import ccall "wasm_engine_new" wasmEngineNew :: IO (Ptr WasmEngineT)
 foreign import ccall "wasm_extern_as_func" wasmExternAsFunc :: Ptr WasmExternT -> IO (Ptr WasmFuncT)
+foreign import ccall "wasm_extern_vec_new" wasmExternVecNew :: Ptr WasmExternVecT -> Word32 -> Ptr (Ptr WasmExternT) -> IO ()
 foreign import ccall "wasm_extern_vec_delete" wasmExternVecDelete :: Ptr WasmExternVecT -> IO ()
-foreign import ccall "wasm_func_new" wasmFuncNew :: Ptr WasmStoreT -> Ptr WasmFuncTypeT -> Ptr WasmValTypeVecT -> WasmFuncCallbackT -> IO ()
+foreign import ccall "wasm_func_as_extern" wasmFuncAsExtern :: Ptr WasmFuncT -> IO (Ptr WasmExternT)
+foreign import ccall "wasm_func_new" wasmFuncNew :: Ptr WasmStoreT -> Ptr WasmFuncTypeT -> WasmFuncCallbackT -> IO (Ptr WasmFuncT)
 foreign import ccall "wasm_functype_new" wasmFuncTypeNew :: Ptr WasmValTypeVecT -> Ptr WasmValTypeVecT -> IO (Ptr WasmFuncTypeT)
 foreign import ccall "wasm_instance_delete" wasmInstanceDelete :: Ptr WasmInstanceT -> IO ()
 foreign import ccall "wasm_instance_exports" wasmInstanceExports :: Ptr WasmInstanceT -> Ptr WasmExternVecT -> IO ()
@@ -218,6 +230,7 @@ foreign import ccall "wasm_valtype_kind" wasmValTypeKind :: Ptr WasmValTypeT -> 
 foreign import ccall "wasm_valtype_new" wasmValTypeNew :: WasmValKindT -> IO (Ptr WasmValTypeT)
 foreign import ccall "wasm_valtype_vec_delete" wasmValTypeVecDelete :: Ptr WasmValTypeVecT -> IO ()
 foreign import ccall "wasm_valtype_vec_new" wasmValTypeVecNew :: Ptr WasmValTypeVecT -> Word32 -> Ptr (Ptr WasmValTypeT) -> IO ()
+foreign import ccall "wasm_valtype_vec_new_empty" wasmValTypeVecNewEmpty :: Ptr WasmValTypeVecT -> IO ()
 foreign import ccall "wasm_valtype_vec_new_uninitialized" wasmValTypeVecNewUninitialized :: Ptr WasmValTypeVecT -> Word32 -> IO ()
 foreign import ccall "wasmtime_error_delete" wasmtimeErrorDelete :: Ptr WasmtimeErrorT -> IO ()
 foreign import ccall "wasmtime_error_message" wasmtimeErrorMessage :: Ptr WasmtimeErrorT -> Ptr WasmByteVecT -> IO ()
