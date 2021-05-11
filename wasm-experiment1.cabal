@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a5a48fd779a47633b1449128046a0647c0e3a09362e6f4be73c3a6dd3af4009d
+-- hash: d62796b9c0d8c5160b1ffcef01823c284c3d6e96daf6446d98bbd0622cb4a6b0
 
 name:           wasm-experiment1
 version:        0.1.0.0
@@ -32,8 +32,7 @@ library
   hs-source-dirs:
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -Wtabs
-  extra-libraries:
-      wasmtime
+  ld-options: -Wl,--whole-archive -Wl,-Bstatic -Wl,-lwasmtime -Wl,-Bdynamic -Wl,--no-whole-archive
   build-depends:
       base >=4.8 && <5
     , bytestring

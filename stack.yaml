@@ -7,4 +7,4 @@ extra-include-dirs:
   - third_party/wasmtime/crates/c-api/include
 
 extra-lib-dirs:
-  - third_party/wasmtime/target/release/libwasm.a
+  - third_party/wasmtime/target/release

@@ -27,8 +27,12 @@ ghc-options:
 
 library:
   source-dirs: src
-  extra-libraries:
-  - wasmtime
+  ld-options:
+  - -Wl,--whole-archive
+  - -Wl,-Bstatic
+  - -Wl,-lwasmtime
+  - -Wl,-Bdynamic
+  - -Wl,--no-whole-archive
 
 executables:
   compiler:
