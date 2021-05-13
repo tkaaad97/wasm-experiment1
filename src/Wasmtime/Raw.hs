@@ -1,11 +1,23 @@
 {-# LANGUAGE GeneralisedNewtypeDeriving #-}
 module Wasmtime.Raw
-    ( WasmEngineT
+    ( WasmByteT
     , WasmByteVecT(..)
+    , WasmFuncCallbackT
+    , WasmEngineT
+    , WasmExternT
     , WasmExternVecT(..)
-    , WasmValT(..)
-    , WasmValVecT(..)
+    , WasmFuncT
+    , WasmFuncTypeT
+    , WasmInstanceT
+    , WasmModuleT
+    , WasmRefT
+    , WasmStoreT
     , WasmTrapT
+    , WasmValKindT
+    , WasmValT(..)
+    , WasmValTypeT
+    , WasmValTypeVecT
+    , WasmValVecT(..)
     , WasmtimeErrorT
     , wasmValKindI32
     , wasmValKindI64
@@ -14,7 +26,9 @@ module Wasmtime.Raw
     , wasmValKindAnyRef
     , wasmValKindFuncRef
     , wasmByteVecDelete
+    , wasmByteVecNew
     , wasmByteVecNewUninitialized
+    , wasmEngineDelete
     , wasmEngineNew
     , wasmExternAsFunc
     , wasmExternVecNew
@@ -49,6 +63,8 @@ import Data.Word (Word32, Word64, Word8)
 import Foreign (FunPtr, Ptr, Storable(..), castPtr, plusPtr)
 
 data WasmEngineT
+
+type WasmByteT = Word8
 
 data WasmByteVecT = WasmByteVecT !Word32 !(Ptr Word8)
 
@@ -210,7 +226,9 @@ wasmValKindFuncRef :: WasmValKindT
 wasmValKindFuncRef = WasmValKindT 129
 
 foreign import ccall "wasm_byte_vec_delete" wasmByteVecDelete :: Ptr WasmByteVecT -> IO ()
+foreign import ccall "wasm_byte_vec_new" wasmByteVecNew :: Ptr WasmByteVecT -> Word32 -> Ptr WasmByteT -> IO ()
 foreign import ccall "wasm_byte_vec_new_uninitialized" wasmByteVecNewUninitialized :: Ptr WasmByteVecT -> Word32 -> IO ()
+foreign import ccall "wasm_engine_delete" wasmEngineDelete :: Ptr WasmEngineT -> IO ()
 foreign import ccall "wasm_engine_new" wasmEngineNew :: IO (Ptr WasmEngineT)
 foreign import ccall "wasm_extern_as_func" wasmExternAsFunc :: Ptr WasmExternT -> IO (Ptr WasmFuncT)
 foreign import ccall "wasm_extern_vec_new" wasmExternVecNew :: Ptr WasmExternVecT -> Word32 -> Ptr (Ptr WasmExternT) -> IO ()
