@@ -9,6 +9,10 @@ module Wasmtime.Raw
     , WasmFuncT
     , WasmFuncTypeT
     , WasmInstanceT
+    , WasmLimitsT(..)
+    , WasmMemoryPagesT
+    , WasmMemoryT
+    , WasmMemoryTypeT
     , WasmModuleT
     , WasmRefT
     , WasmStoreT
@@ -31,6 +35,7 @@ module Wasmtime.Raw
     , wasmEngineDelete
     , wasmEngineNew
     , wasmExternAsFunc
+    , wasmExternAsMemory
     , wasmExternVecNew
     , wasmExternVecDelete
     , wasmFuncAsExtern
@@ -42,6 +47,12 @@ module Wasmtime.Raw
     , wasmFuncTypeNew
     , wasmInstanceDelete
     , wasmInstanceExports
+    , wasmMemoryData
+    , wasmMemoryDataSize
+    , wasmMemoryNew
+    , wasmMemorySize
+    , wasmMemoryType
+    , wasmMemoryTypeNew
     , wasmModuleDelete
     , wasmStoreDelete
     , wasmStoreNew
@@ -63,6 +74,7 @@ module Wasmtime.Raw
     , wasmtimeFuncCall
     , wasmtimeInstanceNew
     , wasmtimeModuleNew
+    , wasmtimeModuleValidate
     , wasmtimeWat2Wasm
     ) where
 
@@ -112,6 +124,14 @@ data WasmModuleT
 data WasmInstanceT
 
 data WasmFuncTypeT
+
+data WasmLimitsT = WasmLimitsT !Word32 !Word32
+
+data WasmMemoryT
+
+data WasmMemoryTypeT
+
+type WasmMemoryPagesT = Word32
 
 data WasmTrapT
 
@@ -216,6 +236,19 @@ instance Storable WasmValTypeVecT where
         poke (castPtr ptr) size
         poke (castPtr ptr `plusPtr` 8) d
 
+instance Storable WasmLimitsT where
+    sizeOf _ = 8
+    alignment _ = 4
+
+    peek ptr = do
+        min_ <- peek $ castPtr ptr
+        max_ <- peek $ castPtr ptr `plusPtr` 4
+        return (WasmLimitsT min_ max_)
+
+    poke ptr (WasmLimitsT min_ max_) = do
+        poke (castPtr ptr) min_
+        poke (castPtr ptr `plusPtr` 4) max_
+
 wasmValKindI32 :: WasmValKindT
 wasmValKindI32 = WasmValKindT 0
 
@@ -240,6 +273,7 @@ foreign import ccall "wasm_byte_vec_new_uninitialized" wasmByteVecNewUninitializ
 foreign import ccall "wasm_engine_delete" wasmEngineDelete :: Ptr WasmEngineT -> IO ()
 foreign import ccall "wasm_engine_new" wasmEngineNew :: IO (Ptr WasmEngineT)
 foreign import ccall "wasm_extern_as_func" wasmExternAsFunc :: Ptr WasmExternT -> IO (Ptr WasmFuncT)
+foreign import ccall "wasm_extern_as_memory" wasmExternAsMemory :: Ptr WasmExternT -> IO (Ptr WasmMemoryT)
 foreign import ccall "wasm_extern_vec_new" wasmExternVecNew :: Ptr WasmExternVecT -> CSize -> Ptr (Ptr WasmExternT) -> IO ()
 foreign import ccall "wasm_extern_vec_delete" wasmExternVecDelete :: Ptr WasmExternVecT -> IO ()
 foreign import ccall "wasm_func_as_extern" wasmFuncAsExtern :: Ptr WasmFuncT -> IO (Ptr WasmExternT)
@@ -251,6 +285,12 @@ foreign import ccall "wasm_functype_delete" wasmFuncTypeDelete :: Ptr WasmFuncTy
 foreign import ccall "wasm_functype_new" wasmFuncTypeNew :: Ptr WasmValTypeVecT -> Ptr WasmValTypeVecT -> IO (Ptr WasmFuncTypeT)
 foreign import ccall "wasm_instance_delete" wasmInstanceDelete :: Ptr WasmInstanceT -> IO ()
 foreign import ccall "wasm_instance_exports" wasmInstanceExports :: Ptr WasmInstanceT -> Ptr WasmExternVecT -> IO ()
+foreign import ccall "wasm_memory_data" wasmMemoryData :: Ptr WasmMemoryT -> IO (Ptr Word8)
+foreign import ccall "wasm_memory_data_size" wasmMemoryDataSize :: Ptr WasmMemoryT -> IO CSize
+foreign import ccall "wasm_memory_new" wasmMemoryNew :: Ptr WasmInstanceT -> Ptr WasmMemoryTypeT -> IO (Ptr WasmMemoryT)
+foreign import ccall "wasm_memory_size" wasmMemorySize :: Ptr WasmMemoryT -> IO WasmMemoryPagesT
+foreign import ccall "wasm_memory_type" wasmMemoryType :: Ptr WasmMemoryT -> IO (Ptr WasmMemoryTypeT)
+foreign import ccall "wasm_memorytype_new" wasmMemoryTypeNew :: Ptr WasmLimitsT -> IO (Ptr WasmMemoryTypeT)
 foreign import ccall "wasm_module_delete" wasmModuleDelete :: Ptr WasmModuleT -> IO ()
 foreign import ccall "wasm_store_delete" wasmStoreDelete :: Ptr WasmStoreT -> IO ()
 foreign import ccall "wasm_store_new" wasmStoreNew :: Ptr WasmEngineT -> IO (Ptr WasmStoreT)
@@ -272,5 +312,5 @@ foreign import ccall "wasmtime_error_message" wasmtimeErrorMessage :: Ptr Wasmti
 foreign import ccall "wasmtime_func_call" wasmtimeFuncCall :: Ptr WasmFuncT -> Ptr WasmValVecT -> Ptr WasmValVecT -> Ptr (Ptr WasmTrapT) -> IO (Ptr WasmtimeErrorT)
 foreign import ccall "wasmtime_instance_new" wasmtimeInstanceNew :: Ptr WasmStoreT -> Ptr WasmModuleT -> Ptr WasmExternVecT -> Ptr (Ptr WasmInstanceT) -> Ptr (Ptr WasmTrapT) -> IO (Ptr WasmtimeErrorT)
 foreign import ccall "wasmtime_module_new" wasmtimeModuleNew :: Ptr WasmEngineT -> Ptr WasmByteVecT -> Ptr (Ptr WasmModuleT) -> IO (Ptr WasmtimeErrorT)
+foreign import ccall "wasmtime_module_validate" wasmtimeModuleValidate :: Ptr WasmStoreT -> Ptr WasmByteVecT -> IO Bool
 foreign import ccall "wasmtime_wat2wasm" wasmtimeWat2Wasm :: Ptr WasmByteVecT -> Ptr WasmByteVecT -> IO (Ptr WasmtimeErrorT)
---wasmModuleValidate :: Ptr WasmStoreT -> Ptr WasmByteVecT -> IO Bool

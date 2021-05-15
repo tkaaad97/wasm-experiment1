@@ -39,6 +39,12 @@ main =
         withWasmtimeModule engine source printWasmtimeError $ \module_ -> do
             mem <- Foreign.newCString "0123456789\0first: %d, second: %d\n\0aaaa"
             withWasmtimeInstance store module_ [(FuncType [wasmValKindI32, wasmValKindI32, wasmValKindI32] [], callback mem)] printWasmtimeError $ \instance_ ->
-                withWasmInstanceExport instance_ 0 $ \(Just func) ->
+                withWasmInstanceExports instance_ $ \exports -> do
+                    func <- getExportFunc exports 0
                     withWasmtimeFuncCall func [WasmValI32 1, WasmValI32 2] printWasmtimeError (const $ putStrLn "trap") $ \results ->
                         putStrLn $ "results: " ++ show results
+
+    where
+    getExportFunc xs idx
+        | length xs > idx = wasmExternAsFunc (xs !! idx)
+        | otherwise = error "export index out of bounds"

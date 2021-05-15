@@ -25,7 +25,7 @@ module Wasmtime
     , withWasmStore
     , withWasmtimeModule
     , withWasmtimeInstance
-    , withWasmInstanceExport
+    , withWasmInstanceExports
     , withWasmtimeFuncCall
     , wasmValVecToList
     ) where
@@ -136,17 +136,22 @@ withWasmtimeInstance store module_ imports errorHandler handler = bracket before
     mid (Right (instance_, _)) = handler instance_
     mid (Left (err, _))        = errorHandler err
 
-withWasmInstanceExport :: Ptr WasmInstanceT -> Int -> (Maybe (Ptr WasmFuncT) -> IO a) -> IO a
-withWasmInstanceExport instance_ idx handler =
-    Foreign.alloca $ \exportVec -> do
+withWasmInstanceExports :: Ptr WasmInstanceT -> ([Ptr WasmExternT] -> IO a) -> IO a
+withWasmInstanceExports instance_ handler = bracket before after mid
+    where
+    before = do
+        exportVec <- Foreign.malloc
         Raw.wasmInstanceExports instance_ exportVec
-        WasmExternVecT size exports <- Foreign.peek exportVec
-        maybeExport <- if idx >= 0 && idx < fromIntegral size
-            then fmap Just . Raw.wasmExternAsFunc =<< Foreign.peekElemOff exports idx
-            else return Nothing
-        r <- handler maybeExport
+        return exportVec
+
+    after exportVec = do
         Raw.wasmExternVecDelete exportVec
-        return r
+        Foreign.free exportVec
+
+    mid exportVec = do
+        WasmExternVecT size p <- Foreign.peek exportVec
+        exports <- Foreign.peekArray (fromIntegral size) p
+        handler exports
 
 withWasmtimeFuncCall :: Ptr WasmFuncT -> [WasmValT] -> (Ptr WasmtimeErrorT -> IO a) -> (Ptr WasmTrapT -> IO a) -> ([WasmValT] -> IO a) -> IO a
 withWasmtimeFuncCall func params errHandler trapHandler handler = do
