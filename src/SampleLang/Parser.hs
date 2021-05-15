@@ -6,7 +6,7 @@ module SampleLang.Parser
     , parseProgram
     ) where
 
-import Control.Monad (unless, void)
+import Control.Monad (void)
 import Data.Char (isAsciiLower, isAsciiUpper, isDigit)
 import Data.Foldable (foldl')
 import Data.Functor (($>))
