@@ -73,10 +73,10 @@ data Func = Func
 data Mut = Const | Var
     deriving (Show, Eq)
 
-data Global = Global !Mut !ValType !(Maybe (Vector Instr))
+data Global = Global !Mut !ValType !Instr
     deriving (Show, Eq)
 
-data Limits = Limits !Word32 !Word32
+data Limits = Limits !Word32 !(Maybe Word32)
     deriving (Show, Eq)
 
 newtype Memory = Memory Limits
@@ -216,6 +216,6 @@ data Import = Import
     } deriving (Show, Eq)
 
 data ImportDesc =
-    ImportFunc !Word32
+    ImportFunc !FuncType
     -- todo other imports
     deriving (Show, Eq)

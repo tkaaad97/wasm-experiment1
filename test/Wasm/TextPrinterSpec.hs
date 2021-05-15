@@ -77,6 +77,41 @@ modules =
         mempty
         mempty
         (Vector.singleton (Export "sum" (ExportFunc 0)))
+      ),
+      ( "module-has-memory-and-data"
+      , Module
+        mempty
+        mempty
+        mempty
+        (Vector.singleton (Memory (Limits 1 Nothing)))
+        (Vector.fromList [DataSegment "hello, world\n" (Just 0), DataSegment "data" (Just 14)])
+        mempty
+        (Vector.singleton (Export "mem" (ExportMemory 0)))
+      )
+    , ( "module-has-import"
+      , Module
+        mempty
+        mempty
+        mempty
+        mempty
+        mempty
+        (Vector.singleton (Import "importmod" "print" (ImportFunc (FuncType (ResultType . Vector.singleton $ NumType I32) (ResultType mempty)))))
+        mempty
+      )
+    , ( "module-has-globals"
+      , Module
+        mempty
+        mempty
+        (Vector.fromList
+            [ Global Var (NumType I32) (I32Const 0)
+            , Global Const (NumType I32) (I32Const 1)
+            , Global Var (NumType I32) (GlobalGet 1)
+            ]
+        )
+        mempty
+        mempty
+        mempty
+        mempty
       )
     ]
 

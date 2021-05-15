@@ -14,7 +14,7 @@ import qualified Data.Text.Lazy.Builder as Builder (fromString, fromText,
 import qualified Data.Text.Lazy.Builder.Int as Builder (decimal)
 import qualified Data.Text.Lazy.Builder.RealFloat as Builder (realFloat)
 import Data.Vector (Vector)
-import qualified Data.Vector as Vector (imap, map, null, toList, (!))
+import qualified Data.Vector as Vector (imap, map, toList, (!))
 import Wasm.Types
 
 printText :: Module -> Text
@@ -25,13 +25,25 @@ intercalateBuilder x xs = mconcat (intersperse x xs)
 
 buildModule :: Module -> Builder
 buildModule m =
-    intercalateBuilder "\n  " (["(module"] ++ buildTypes types ++ buildFuncs types funcs ++ buildExports exports ++ buildDataSegments datas)
+    intercalateBuilder "\n  "
+        ( ["(module"] ++
+          buildTypes types ++
+          buildFuncs types funcs ++
+          buildGlobals globals ++
+          buildImports imports ++
+          buildExports exports ++
+          buildMemories memories ++
+          buildDataSegments datas
+        )
     <>
     "\n)\n"
     where
     funcs = moduleFuncs m
     types = moduleTypes m
+    globals = moduleGlobals m
+    imports = moduleImports m
     exports = moduleExports m
+    memories = moduleMemories m
     datas = moduleDatas m
 
 buildIndexComment :: Int -> Builder
@@ -244,19 +256,49 @@ buildBlockType (BlockTypeFuncType (FuncType (ResultType params) (ResultType resu
         [ buildResult results | not (null results) ]
 buildBlockType BlockTypeEmpty = mempty
 
+buildGlobals :: Vector Global -> [Builder]
+buildGlobals = Vector.toList . Vector.map buildGlobal
+
+buildGlobal :: Global -> Builder
+buildGlobal (Global mut valType ini) =
+    "(global " <> buildGlobalType mut valType <> " (" <> buildInstr mempty ini <> "))"
+
+buildGlobalType :: Mut -> ValType -> Builder
+buildGlobalType Const valType = buildValType valType
+buildGlobalType Var valType   = "(mut " <> buildValType valType <> ")"
+
+buildImports :: Vector Import -> [Builder]
+buildImports = Vector.toList . Vector.map buildImport
+
+buildImport :: Import -> Builder
+buildImport (Import moduleName name (ImportFunc (FuncType (ResultType params) (ResultType results)))) =
+    intercalateBuilder " "
+    ["(import"
+    , "\"" <> Builder.fromText moduleName <> "\""
+    , "\"" <> Builder.fromText name <> "\""
+    , intercalateBuilder " " (["(func"] ++ [ buildParam params | not (null params) ] ++ [ buildResult results | not (null results) ]) <> ")"
+    ]
+    <>
+    ")"
+
 buildExports :: Vector Export -> [Builder]
 buildExports = Vector.toList . Vector.map buildExport
 
 buildExport :: Export -> Builder
 buildExport (Export name (ExportFunc idx)) = mconcat ["(export \"", Builder.fromText name, "\" (func ", Builder.decimal idx, "))"]
 buildExport (Export name (ExportTable idx)) = mconcat ["(export \"", Builder.fromText name, "\" (table ", Builder.decimal idx, "))"]
-buildExport (Export name (ExportMemory idx)) = mconcat ["(export \"", Builder.fromText name, "\" (mem ", Builder.decimal idx, "))"]
+buildExport (Export name (ExportMemory idx)) = mconcat ["(export \"", Builder.fromText name, "\" (memory ", Builder.decimal idx, "))"]
 buildExport (Export name (ExportGlobal idx)) = mconcat ["(export \"", Builder.fromText name, "\" (global ", Builder.decimal idx, "))"]
 
+buildMemories :: Vector Memory -> [Builder]
+buildMemories = Vector.toList . Vector.imap buildMemory
+
+buildMemory :: Int -> Memory -> Builder
+buildMemory i (Memory (Limits min_ Nothing)) = mconcat ["(memory ", buildIndexComment i, " ", Builder.decimal min_, ")"]
+buildMemory i (Memory (Limits min_ (Just max_))) = mconcat ["(memory ", buildIndexComment i, " ", Builder.decimal min_, " ", Builder.decimal max_, ")"]
+
 buildDataSegments :: Vector DataSegment -> [Builder]
-buildDataSegments xs
-    | Vector.null xs = []
-    | otherwise = "(memory 1)" : Vector.toList (Vector.imap buildDataSegment xs)
+buildDataSegments = Vector.toList . Vector.imap buildDataSegment
 
 buildDataSegment :: Int -> DataSegment -> Builder
 buildDataSegment i (DataSegment s Nothing) = mconcat ["(data ", buildIndexComment i, " ", buildStringLiteral s, ")"]

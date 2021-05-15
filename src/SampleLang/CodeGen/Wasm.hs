@@ -9,7 +9,7 @@ import Data.Bits ((.&.))
 import Data.Text (Text)
 import Data.Vector (Vector)
 import qualified Data.Vector as Vector (drop, foldM', fromList, imap, map, mapM,
-                                        singleton)
+                                        null, singleton)
 import qualified SampleLang.Ast.Resolved as R
 import SampleLang.Ast.Types
 import qualified SampleLang.Resolve as R (getExprType)
@@ -27,10 +27,11 @@ gen (R.Program funcs strs _) = do
         funcVec = Vector.imap (\i (WasmFunc _ _ locals instrVec) -> Wasm.Func (fromIntegral i) locals instrVec) wasmFuncVec
         exportVec = Vector.imap (\i (WasmFunc name _ _ _) -> Wasm.Export name (Wasm.ExportFunc (fromIntegral i))) wasmFuncVec
         dataVec = Vector.map (\(s, offLen) -> Wasm.DataSegment s . Just . fromIntegral $ offLen .&. 0xFFFF) strs
+        memoryVec = if Vector.null dataVec then mempty else Vector.singleton (Wasm.Memory (Wasm.Limits 1 Nothing))
         wasm = Wasm.Module
             { Wasm.moduleFuncs = funcVec
             , Wasm.moduleGlobals = mempty
-            , Wasm.moduleMemories = mempty
+            , Wasm.moduleMemories = memoryVec
             , Wasm.moduleTypes = typeVec
             , Wasm.moduleImports = mempty
             , Wasm.moduleExports = exportVec
