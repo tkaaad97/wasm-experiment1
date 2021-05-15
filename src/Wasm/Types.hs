@@ -7,6 +7,10 @@ module Wasm.Types
     , ValType(..)
     , ResultType(..)
     , FuncType(..)
+    , Mut(..)
+    , Global(..)
+    , Limits(..)
+    , Memory(..)
     , DataSegment(..)
     , BlockType(..)
     , IUnop(..)
@@ -18,6 +22,8 @@ module Wasm.Types
     , FRelop(..)
     , Export(..)
     , ExportDesc(..)
+    , Import(..)
+    , ImportDesc(..)
     ) where
 
 import Data.Text (Text)
@@ -25,14 +31,14 @@ import Data.Vector (Vector)
 import Data.Word (Word32, Word64)
 
 data Module = Module
-    { moduleTypes   :: !(Vector FuncType)
-    , moduleFuncs   :: !(Vector Func)
-    --, moduleGlobals :: !(Vector Global)
+    { moduleTypes    :: !(Vector FuncType)
+    , moduleFuncs    :: !(Vector Func)
+    , moduleGlobals  :: !(Vector Global)
     --, moduleTables   :: !(Vector Table)
-    --, moduleMemories :: !(Vector Memory)
-    , moduleDatas   :: !(Vector DataSegment)
-    --, moduleImports  :: !(Vector Import)
-    , moduleExports :: !(Vector Export)
+    , moduleMemories :: !(Vector Memory)
+    , moduleDatas    :: !(Vector DataSegment)
+    , moduleImports  :: !(Vector Import)
+    , moduleExports  :: !(Vector Export)
     } deriving (Show, Eq)
 
 data NumType =
@@ -63,6 +69,18 @@ data Func = Func
     , funcLocals :: !(Vector ValType)
     , funcBody   :: !(Vector Instr)
     } deriving (Show, Eq)
+
+data Mut = Const | Var
+    deriving (Show, Eq)
+
+data Global = Global !Mut !ValType !(Maybe (Vector Instr))
+    deriving (Show, Eq)
+
+data Limits = Limits !Word32 !Word32
+    deriving (Show, Eq)
+
+newtype Memory = Memory Limits
+    deriving (Show, Eq)
 
 data DataSegment = DataSegment !Text !(Maybe Word32) -- todo offset instr*
     deriving (Show, Eq)
@@ -189,4 +207,15 @@ data ExportDesc =
     ExportTable !Word32 |
     ExportMemory !Word32 |
     ExportGlobal !Word32
+    deriving (Show, Eq)
+
+data Import = Import
+    { importModuleName :: !Text
+    , importName       :: !Text
+    , importDesc       :: !ImportDesc
+    } deriving (Show, Eq)
+
+data ImportDesc =
+    ImportFunc !Word32
+    -- todo other imports
     deriving (Show, Eq)

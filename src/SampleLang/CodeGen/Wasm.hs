@@ -29,7 +29,10 @@ gen (R.Program funcs strs _) = do
         dataVec = Vector.map (\(s, offLen) -> Wasm.DataSegment s . Just . fromIntegral $ offLen .&. 0xFFFF) strs
         wasm = Wasm.Module
             { Wasm.moduleFuncs = funcVec
+            , Wasm.moduleGlobals = mempty
+            , Wasm.moduleMemories = mempty
             , Wasm.moduleTypes = typeVec
+            , Wasm.moduleImports = mempty
             , Wasm.moduleExports = exportVec
             , Wasm.moduleDatas = dataVec
             }
