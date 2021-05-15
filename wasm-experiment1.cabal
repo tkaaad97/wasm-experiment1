@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1c67ba370e9c0c7cc54b50dbebaa14be71d23e5e9acab00f2579d816e7bd011a
+-- hash: b12c25e691f4bd8f591d1b5d4e05ecb8f0fd88322c049f89bdf0b3bcf46f58d1
 
 name:           wasm-experiment1
 version:        0.1.0.0
@@ -64,12 +64,12 @@ executable compiler
     , wasm-experiment1
   default-language: Haskell2010
 
-executable wasm-experiment1-exe
+executable wasmtime-example
   main-is: Main.hs
   other-modules:
       Paths_wasm_experiment1
   hs-source-dirs:
-      app
+      wasmtime-example
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -Wtabs -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.8 && <5

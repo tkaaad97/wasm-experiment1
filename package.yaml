@@ -44,9 +44,9 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - wasm-experiment1
-  wasm-experiment1-exe:
+  wasmtime-example:
     main:                Main.hs
-    source-dirs:         app
+    source-dirs:         wasmtime-example
     ghc-options:
     - -threaded
     - -rtsopts

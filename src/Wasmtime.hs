@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module Wasmtime
     ( FuncType(..)
     , WasmByteT
@@ -28,15 +29,18 @@ module Wasmtime
     , withWasmInstanceExports
     , withWasmtimeFuncCall
     , wasmValVecToList
+    , wat2Wasm
+    , getWasmtimeErrorMessage
     ) where
 
-import Control.Exception (bracket)
+import Control.Exception (bracket, throwIO)
 import Control.Monad (unless, when, zipWithM)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as ByteString (length)
-import qualified Data.ByteString.Unsafe as ByteString (unsafeUseAsCString)
+import qualified Data.ByteString as ByteString (length, packCStringLen,
+                                                useAsCString)
 import Foreign (FunPtr, Ptr)
 import qualified Foreign
+import qualified Foreign.C.String as Foreign (peekCStringLen)
 import Wasmtime.Raw (WasmByteT, WasmByteVecT(..), WasmEngineT, WasmExternT,
                      WasmExternVecT(..), WasmFuncCallbackT, WasmFuncT,
                      WasmFuncTypeT, WasmInstanceT, WasmModuleT, WasmRefT,
@@ -81,7 +85,7 @@ withWasmtimeModule engine source errorHandler handler = bracket before after mid
     where
     before =
         Foreign.alloca $ \byteVec ->
-        ByteString.unsafeUseAsCString source $ \sp ->
+        ByteString.useAsCString source $ \sp ->
         Foreign.alloca $ \pp -> do
             Raw.wasmByteVecNew byteVec (fromIntegral (ByteString.length source)) (Foreign.castPtr sp)
             err <- Raw.wasmtimeModuleNew engine byteVec pp
@@ -187,3 +191,28 @@ wasmValVecToList :: Ptr WasmValVecT -> IO [WasmValT]
 wasmValVecToList vecPtr = do
     WasmValVecT size p <- Foreign.peek vecPtr
     Foreign.peekArray (fromIntegral size) p
+
+wat2Wasm :: ByteString -> IO ByteString
+wat2Wasm wat =
+    Foreign.alloca $ \sourceVec ->
+    Foreign.alloca $ \destVec ->
+    ByteString.useAsCString wat $ \sp -> do
+        Raw.wasmByteVecNew sourceVec (fromIntegral (ByteString.length wat)) (Foreign.castPtr sp)
+        err <- Raw.wasmtimeWat2Wasm sourceVec destVec
+        unless (err == Foreign.nullPtr) $ throwIO . userError =<< getWasmtimeErrorMessage err
+        WasmByteVecT len mp <- Foreign.peek destVec
+        !wasm <- ByteString.packCStringLen (Foreign.castPtr mp, fromIntegral len)
+        Raw.wasmByteVecDelete sourceVec
+        Raw.wasmByteVecDelete destVec
+        return wasm
+
+getWasmtimeErrorMessage :: Ptr WasmtimeErrorT -> IO String
+getWasmtimeErrorMessage err
+    | err /= Foreign.nullPtr =
+        Foreign.alloca $ \p -> do
+            Raw.wasmtimeErrorMessage err p
+            WasmByteVecT len mp <- Foreign.peek p
+            str <- Foreign.peekCStringLen (Foreign.castPtr mp, fromIntegral len)
+            Raw.wasmByteVecDelete p
+            return str
+    | otherwise = return ""
