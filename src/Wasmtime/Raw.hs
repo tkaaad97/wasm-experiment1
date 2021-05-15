@@ -34,9 +34,11 @@ module Wasmtime.Raw
     , wasmExternVecNew
     , wasmExternVecDelete
     , wasmFuncAsExtern
+    , wasmFuncDelete
     , wasmFuncNew
     , wasmFuncParamArity
     , wasmFuncResultArity
+    , wasmFuncTypeDelete
     , wasmFuncTypeNew
     , wasmInstanceDelete
     , wasmInstanceExports
@@ -49,6 +51,7 @@ module Wasmtime.Raw
     , wasmValTypeKind
     , wasmValTypeNew
     , wasmValTypeVecDelete
+    , wasmValVecDelete
     , wasmValVecNew
     , wasmValVecNewEmpty
     , wasmValVecNewUninitialized
@@ -240,9 +243,11 @@ foreign import ccall "wasm_extern_as_func" wasmExternAsFunc :: Ptr WasmExternT -
 foreign import ccall "wasm_extern_vec_new" wasmExternVecNew :: Ptr WasmExternVecT -> CSize -> Ptr (Ptr WasmExternT) -> IO ()
 foreign import ccall "wasm_extern_vec_delete" wasmExternVecDelete :: Ptr WasmExternVecT -> IO ()
 foreign import ccall "wasm_func_as_extern" wasmFuncAsExtern :: Ptr WasmFuncT -> IO (Ptr WasmExternT)
+foreign import ccall "wasm_func_delete" wasmFuncDelete :: Ptr WasmFuncT -> IO ()
 foreign import ccall "wasm_func_new" wasmFuncNew :: Ptr WasmStoreT -> Ptr WasmFuncTypeT -> WasmFuncCallbackT -> IO (Ptr WasmFuncT)
 foreign import ccall "wasm_func_param_arity" wasmFuncParamArity :: Ptr WasmFuncT -> IO CSize
 foreign import ccall "wasm_func_result_arity" wasmFuncResultArity :: Ptr WasmFuncT -> IO CSize
+foreign import ccall "wasm_functype_delete" wasmFuncTypeDelete :: Ptr WasmFuncTypeT -> IO ()
 foreign import ccall "wasm_functype_new" wasmFuncTypeNew :: Ptr WasmValTypeVecT -> Ptr WasmValTypeVecT -> IO (Ptr WasmFuncTypeT)
 foreign import ccall "wasm_instance_delete" wasmInstanceDelete :: Ptr WasmInstanceT -> IO ()
 foreign import ccall "wasm_instance_exports" wasmInstanceExports :: Ptr WasmInstanceT -> Ptr WasmExternVecT -> IO ()
@@ -255,6 +260,7 @@ foreign import ccall "wasm_valtype_delete" wasmValTypeDelete :: Ptr WasmValTypeT
 foreign import ccall "wasm_valtype_kind" wasmValTypeKind :: Ptr WasmValTypeT -> IO WasmValKindT
 foreign import ccall "wasm_valtype_new" wasmValTypeNew :: WasmValKindT -> IO (Ptr WasmValTypeT)
 foreign import ccall "wasm_valtype_vec_delete" wasmValTypeVecDelete :: Ptr WasmValTypeVecT -> IO ()
+foreign import ccall "wasm_val_vec_delete" wasmValVecDelete :: Ptr WasmValVecT -> IO ()
 foreign import ccall "wasm_val_vec_new" wasmValVecNew :: Ptr WasmValVecT -> CSize -> Ptr WasmValT -> IO ()
 foreign import ccall "wasm_val_vec_new_empty" wasmValVecNewEmpty :: Ptr WasmValVecT -> IO ()
 foreign import ccall "wasm_val_vec_new_uninitialized" wasmValVecNewUninitialized :: Ptr WasmValVecT -> CSize -> IO ()

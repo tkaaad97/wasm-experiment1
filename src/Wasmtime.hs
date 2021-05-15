@@ -25,7 +25,7 @@ module Wasmtime
     , withWasmStore
     , withWasmtimeModule
     , withWasmtimeInstance
-    , getWasmInstanceExport
+    , withWasmInstanceExport
     , withWasmtimeFuncCall
     , wasmValVecToList
     ) where
@@ -54,16 +54,21 @@ deleteCallbackFunPtr :: FunPtr (Ptr WasmValVecT -> Ptr WasmValVecT -> IO (Ptr Wa
 deleteCallbackFunPtr = Foreign.freeHaskellFunPtr
 
 newWasmFuncType :: FuncType -> IO (Ptr WasmFuncTypeT)
-newWasmFuncType (FuncType paramKinds resultKinds) = do
-    params <- Foreign.newArray =<< mapM Raw.wasmValTypeNew paramKinds
-    paramVec <- Foreign.malloc
-    Raw.wasmValTypeVecNew paramVec (fromIntegral (length paramKinds)) params
+newWasmFuncType (FuncType paramKinds resultKinds) =
+    withWasmValTypeVec paramKinds $ \paramVecPtr ->
+    withWasmValTypeVec resultKinds $ \resultVecPtr ->
+        Raw.wasmFuncTypeNew paramVecPtr resultVecPtr
 
-    results <- Foreign.newArray =<< mapM Raw.wasmValTypeNew resultKinds
-    resultVec <- Foreign.malloc
-    Raw.wasmValTypeVecNew resultVec (fromIntegral (length resultKinds)) results
-
-    Raw.wasmFuncTypeNew paramVec resultVec
+withWasmValTypeVec :: [WasmValKindT] -> (Ptr WasmValTypeVecT -> IO a) -> IO a
+withWasmValTypeVec kinds f = do
+    valTypes <- mapM Raw.wasmValTypeNew kinds
+    Foreign.withArray valTypes $ \valTypePtr ->
+        Foreign.alloca $ \valTypeVecPtr -> do
+            Raw.wasmValTypeVecNew valTypeVecPtr (fromIntegral (length kinds)) valTypePtr
+            r <- f valTypeVecPtr
+            mapM_ Raw.wasmValTypeDelete valTypes
+            Raw.wasmValTypeVecDelete valTypeVecPtr
+            return r
 
 withWasmEngine :: (Ptr WasmEngineT -> IO a) -> IO a
 withWasmEngine = bracket Raw.wasmEngineNew Raw.wasmEngineDelete
@@ -80,6 +85,7 @@ withWasmtimeModule engine source errorHandler handler = bracket before after mid
         Foreign.alloca $ \pp -> do
             Raw.wasmByteVecNew byteVec (fromIntegral (ByteString.length source)) (Foreign.castPtr sp)
             err <- Raw.wasmtimeModuleNew engine byteVec pp
+            Raw.wasmByteVecDelete byteVec
             module_ <- Foreign.peek pp
             if err == Foreign.nullPtr
                 then return (Right module_)
@@ -105,12 +111,15 @@ withWasmtimeInstance store module_ imports errorHandler handler = bracket before
         funPtrs <- mapM (newCallbackFunPtr . snd) imports
         funcs <- zipWithM (Raw.wasmFuncNew store) wasmFuncTypes funPtrs
         externs <- mapM Raw.wasmFuncAsExtern funcs
-        importVec <- Foreign.malloc
-        Foreign.withArray externs $ Raw.wasmExternVecNew importVec (fromIntegral (length imports))
+        mapM_ Raw.wasmFuncTypeDelete wasmFuncTypes
 
-        Foreign.alloca $ \pp ->
+        Foreign.alloca $ \importVec ->
+            Foreign.alloca $ \pp ->
             Foreign.alloca $ \trap -> do
+                Foreign.withArray externs $ Raw.wasmExternVecNew importVec (fromIntegral (length imports))
                 err <- Raw.wasmtimeInstanceNew store module_ importVec pp trap
+                Raw.wasmExternVecDelete importVec
+                mapM_ Raw.wasmFuncDelete funcs
                 instance_ <- Foreign.peek pp
                 if err == Foreign.nullPtr
                     then return (Right (instance_, funPtrs))
@@ -127,14 +136,17 @@ withWasmtimeInstance store module_ imports errorHandler handler = bracket before
     mid (Right (instance_, _)) = handler instance_
     mid (Left (err, _))        = errorHandler err
 
-getWasmInstanceExport :: Ptr WasmInstanceT -> Int -> IO (Maybe (Ptr WasmFuncT))
-getWasmInstanceExport instance_ idx =
+withWasmInstanceExport :: Ptr WasmInstanceT -> Int -> (Maybe (Ptr WasmFuncT) -> IO a) -> IO a
+withWasmInstanceExport instance_ idx handler =
     Foreign.alloca $ \exportVec -> do
         Raw.wasmInstanceExports instance_ exportVec
         WasmExternVecT size exports <- Foreign.peek exportVec
-        if idx >= 0 && idx < fromIntegral size
+        maybeExport <- if idx >= 0 && idx < fromIntegral size
             then fmap Just . Raw.wasmExternAsFunc =<< Foreign.peekElemOff exports idx
             else return Nothing
+        r <- handler maybeExport
+        Raw.wasmExternVecDelete exportVec
+        return r
 
 withWasmtimeFuncCall :: Ptr WasmFuncT -> [WasmValT] -> (Ptr WasmtimeErrorT -> IO a) -> (Ptr WasmTrapT -> IO a) -> ([WasmValT] -> IO a) -> IO a
 withWasmtimeFuncCall func params errHandler trapHandler handler = do
@@ -153,6 +165,8 @@ withWasmtimeFuncCall func params errHandler trapHandler handler = do
             results <- if err == Foreign.nullPtr && trap == Foreign.nullPtr
                 then wasmValVecToList resultVecPtr
                 else return []
+            Raw.wasmValVecDelete paramVecPtr
+            Raw.wasmValVecDelete resultVecPtr
             return (err, trap, results)
 
     after (err, trap, _) = do
