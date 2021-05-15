@@ -1,6 +1,5 @@
 module Main where
 
-import Control.Monad (unless)
 import qualified Data.ByteString as ByteString (readFile)
 import Data.Word (Word32)
 import Foreign (Ptr)
@@ -41,18 +40,6 @@ main =
             mem <- Foreign.newCString "0123456789\0first: %d, second: %d\n\0aaaa"
             withWasmtimeInstance store module_ [(FuncType [wasmValKindI32, wasmValKindI32, wasmValKindI32] [], callback mem)] printWasmtimeError $ \instance_ -> do
 
-                func <- Foreign.alloca $ \exportVec -> do
-                    wasmInstanceExports instance_ exportVec
-                    WasmExternVecT _ exports <- Foreign.peek exportVec
-                    wasmExternAsFunc =<< Foreign.peek exports
-
-                (err3, result) <-
-                    Foreign.withArray [WasmValI32 1, WasmValI32 2] $ \paramVecPtr ->
-                    Foreign.with (WasmValVecT 2 paramVecPtr) $ \params ->
-                    Foreign.allocaArray 1 $ \resultVecPtr ->
-                    Foreign.with (WasmValVecT 1 resultVecPtr) $ \results -> do
-                        err3 <- wasmtimeFuncCall func params results
-                        result <- Foreign.peek resultVecPtr
-                        return (err3, result)
-                printWasmtimeError err3
-                putStrLn $ "result: " ++ show result
+                func <- maybe (error "failed to get export") return =<< getWasmInstanceExport instance_ 0
+                withWasmtimeFuncCall func [WasmValI32 1, WasmValI32 2] printWasmtimeError (const $ putStrLn "trap") $ \results ->
+                    putStrLn $ "results: " ++ show results

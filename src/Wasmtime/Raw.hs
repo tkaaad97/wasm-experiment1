@@ -16,7 +16,7 @@ module Wasmtime.Raw
     , WasmValKindT
     , WasmValT(..)
     , WasmValTypeT
-    , WasmValTypeVecT
+    , WasmValTypeVecT(..)
     , WasmValVecT(..)
     , WasmtimeErrorT
     , wasmValKindI32
@@ -35,6 +35,8 @@ module Wasmtime.Raw
     , wasmExternVecDelete
     , wasmFuncAsExtern
     , wasmFuncNew
+    , wasmFuncParamArity
+    , wasmFuncResultArity
     , wasmFuncTypeNew
     , wasmInstanceDelete
     , wasmInstanceExports
@@ -47,6 +49,9 @@ module Wasmtime.Raw
     , wasmValTypeKind
     , wasmValTypeNew
     , wasmValTypeVecDelete
+    , wasmValVecNew
+    , wasmValVecNewEmpty
+    , wasmValVecNewUninitialized
     , wasmValTypeVecNew
     , wasmValTypeVecNewEmpty
     , wasmValTypeVecNewUninitialized
@@ -61,16 +66,17 @@ module Wasmtime.Raw
 import Control.Exception (throwIO)
 import Data.Word (Word32, Word64, Word8)
 import Foreign (FunPtr, Ptr, Storable(..), castPtr, plusPtr)
+import Foreign.C.Types (CSize(..))
 
 data WasmEngineT
 
 type WasmByteT = Word8
 
-data WasmByteVecT = WasmByteVecT !Word32 !(Ptr Word8)
+data WasmByteVecT = WasmByteVecT !CSize !(Ptr Word8)
 
 data WasmExternT
 
-data WasmExternVecT = WasmExternVecT !Word32 !(Ptr (Ptr WasmExternT))
+data WasmExternVecT = WasmExternVecT !CSize !(Ptr (Ptr WasmExternT))
 
 newtype WasmValKindT = WasmValKindT Word8
     deriving (Show, Eq, Storable)
@@ -86,11 +92,11 @@ data WasmValT =
     WasmValFuncRef !(Ptr WasmRefT)
     deriving (Show, Eq)
 
-data WasmValVecT = WasmValVecT !Word32 !(Ptr WasmValT)
+data WasmValVecT = WasmValVecT !CSize !(Ptr WasmValT)
 
 data WasmValTypeT
 
-data WasmValTypeVecT = WasmValTypeVecT !Word32 !(Ptr (Ptr WasmValTypeT))
+data WasmValTypeVecT = WasmValTypeVecT !CSize !(Ptr (Ptr WasmValTypeT))
 
 type WasmFuncCallbackT = Foreign.FunPtr (Ptr WasmValVecT -> Ptr WasmValVecT -> IO (Ptr WasmTrapT))
 
@@ -226,15 +232,17 @@ wasmValKindFuncRef :: WasmValKindT
 wasmValKindFuncRef = WasmValKindT 129
 
 foreign import ccall "wasm_byte_vec_delete" wasmByteVecDelete :: Ptr WasmByteVecT -> IO ()
-foreign import ccall "wasm_byte_vec_new" wasmByteVecNew :: Ptr WasmByteVecT -> Word32 -> Ptr WasmByteT -> IO ()
-foreign import ccall "wasm_byte_vec_new_uninitialized" wasmByteVecNewUninitialized :: Ptr WasmByteVecT -> Word32 -> IO ()
+foreign import ccall "wasm_byte_vec_new" wasmByteVecNew :: Ptr WasmByteVecT -> CSize -> Ptr WasmByteT -> IO ()
+foreign import ccall "wasm_byte_vec_new_uninitialized" wasmByteVecNewUninitialized :: Ptr WasmByteVecT -> CSize -> IO ()
 foreign import ccall "wasm_engine_delete" wasmEngineDelete :: Ptr WasmEngineT -> IO ()
 foreign import ccall "wasm_engine_new" wasmEngineNew :: IO (Ptr WasmEngineT)
 foreign import ccall "wasm_extern_as_func" wasmExternAsFunc :: Ptr WasmExternT -> IO (Ptr WasmFuncT)
-foreign import ccall "wasm_extern_vec_new" wasmExternVecNew :: Ptr WasmExternVecT -> Word32 -> Ptr (Ptr WasmExternT) -> IO ()
+foreign import ccall "wasm_extern_vec_new" wasmExternVecNew :: Ptr WasmExternVecT -> CSize -> Ptr (Ptr WasmExternT) -> IO ()
 foreign import ccall "wasm_extern_vec_delete" wasmExternVecDelete :: Ptr WasmExternVecT -> IO ()
 foreign import ccall "wasm_func_as_extern" wasmFuncAsExtern :: Ptr WasmFuncT -> IO (Ptr WasmExternT)
 foreign import ccall "wasm_func_new" wasmFuncNew :: Ptr WasmStoreT -> Ptr WasmFuncTypeT -> WasmFuncCallbackT -> IO (Ptr WasmFuncT)
+foreign import ccall "wasm_func_param_arity" wasmFuncParamArity :: Ptr WasmFuncT -> IO CSize
+foreign import ccall "wasm_func_result_arity" wasmFuncResultArity :: Ptr WasmFuncT -> IO CSize
 foreign import ccall "wasm_functype_new" wasmFuncTypeNew :: Ptr WasmValTypeVecT -> Ptr WasmValTypeVecT -> IO (Ptr WasmFuncTypeT)
 foreign import ccall "wasm_instance_delete" wasmInstanceDelete :: Ptr WasmInstanceT -> IO ()
 foreign import ccall "wasm_instance_exports" wasmInstanceExports :: Ptr WasmInstanceT -> Ptr WasmExternVecT -> IO ()
@@ -247,12 +255,15 @@ foreign import ccall "wasm_valtype_delete" wasmValTypeDelete :: Ptr WasmValTypeT
 foreign import ccall "wasm_valtype_kind" wasmValTypeKind :: Ptr WasmValTypeT -> IO WasmValKindT
 foreign import ccall "wasm_valtype_new" wasmValTypeNew :: WasmValKindT -> IO (Ptr WasmValTypeT)
 foreign import ccall "wasm_valtype_vec_delete" wasmValTypeVecDelete :: Ptr WasmValTypeVecT -> IO ()
-foreign import ccall "wasm_valtype_vec_new" wasmValTypeVecNew :: Ptr WasmValTypeVecT -> Word32 -> Ptr (Ptr WasmValTypeT) -> IO ()
+foreign import ccall "wasm_val_vec_new" wasmValVecNew :: Ptr WasmValVecT -> CSize -> Ptr WasmValT -> IO ()
+foreign import ccall "wasm_val_vec_new_empty" wasmValVecNewEmpty :: Ptr WasmValVecT -> IO ()
+foreign import ccall "wasm_val_vec_new_uninitialized" wasmValVecNewUninitialized :: Ptr WasmValVecT -> CSize -> IO ()
+foreign import ccall "wasm_valtype_vec_new" wasmValTypeVecNew :: Ptr WasmValTypeVecT -> CSize -> Ptr (Ptr WasmValTypeT) -> IO ()
 foreign import ccall "wasm_valtype_vec_new_empty" wasmValTypeVecNewEmpty :: Ptr WasmValTypeVecT -> IO ()
-foreign import ccall "wasm_valtype_vec_new_uninitialized" wasmValTypeVecNewUninitialized :: Ptr WasmValTypeVecT -> Word32 -> IO ()
+foreign import ccall "wasm_valtype_vec_new_uninitialized" wasmValTypeVecNewUninitialized :: Ptr WasmValTypeVecT -> CSize -> IO ()
 foreign import ccall "wasmtime_error_delete" wasmtimeErrorDelete :: Ptr WasmtimeErrorT -> IO ()
 foreign import ccall "wasmtime_error_message" wasmtimeErrorMessage :: Ptr WasmtimeErrorT -> Ptr WasmByteVecT -> IO ()
-foreign import ccall "wasmtime_func_call" wasmtimeFuncCall :: Ptr WasmFuncT -> Ptr WasmValVecT -> Ptr WasmValVecT -> IO (Ptr WasmtimeErrorT)
+foreign import ccall "wasmtime_func_call" wasmtimeFuncCall :: Ptr WasmFuncT -> Ptr WasmValVecT -> Ptr WasmValVecT -> Ptr (Ptr WasmTrapT) -> IO (Ptr WasmtimeErrorT)
 foreign import ccall "wasmtime_instance_new" wasmtimeInstanceNew :: Ptr WasmStoreT -> Ptr WasmModuleT -> Ptr WasmExternVecT -> Ptr (Ptr WasmInstanceT) -> Ptr (Ptr WasmTrapT) -> IO (Ptr WasmtimeErrorT)
 foreign import ccall "wasmtime_module_new" wasmtimeModuleNew :: Ptr WasmEngineT -> Ptr WasmByteVecT -> Ptr (Ptr WasmModuleT) -> IO (Ptr WasmtimeErrorT)
 foreign import ccall "wasmtime_wat2wasm" wasmtimeWat2Wasm :: Ptr WasmByteVecT -> Ptr WasmByteVecT -> IO (Ptr WasmtimeErrorT)

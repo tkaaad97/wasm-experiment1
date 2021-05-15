@@ -1,11 +1,11 @@
 module Wasmtime
     ( FuncType(..)
     , WasmByteT
-    , WasmByteVecT
+    , WasmByteVecT(..)
     , WasmFuncCallbackT
     , WasmEngineT
     , WasmExternT
-    , WasmExternVecT
+    , WasmExternVecT(..)
     , WasmFuncT
     , WasmFuncTypeT
     , WasmInstanceT
@@ -15,8 +15,8 @@ module Wasmtime
     , WasmValKindT
     , WasmValT
     , WasmValTypeT
-    , WasmValTypeVecT
-    , WasmValVecT
+    , WasmValTypeVecT(..)
+    , WasmValVecT(..)
     , WasmtimeErrorT
     , newCallbackFunPtr
     , deleteCallbackFunPtr
@@ -25,20 +25,24 @@ module Wasmtime
     , withWasmStore
     , withWasmtimeModule
     , withWasmtimeInstance
+    , getWasmInstanceExport
+    , withWasmtimeFuncCall
+    , wasmValVecToList
     ) where
 
 import Control.Exception (bracket)
-import Control.Monad (unless, zipWithM)
+import Control.Monad (unless, when, zipWithM)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as ByteString (length)
 import qualified Data.ByteString.Unsafe as ByteString (unsafeUseAsCString)
 import Foreign (FunPtr, Ptr)
 import qualified Foreign
-import Wasmtime.Raw (WasmByteT, WasmByteVecT, WasmEngineT, WasmExternT,
-                     WasmExternVecT, WasmFuncCallbackT, WasmFuncT,
+import Wasmtime.Raw (WasmByteT, WasmByteVecT(..), WasmEngineT, WasmExternT,
+                     WasmExternVecT(..), WasmFuncCallbackT, WasmFuncT,
                      WasmFuncTypeT, WasmInstanceT, WasmModuleT, WasmRefT,
                      WasmStoreT, WasmTrapT, WasmValKindT, WasmValT,
-                     WasmValTypeT, WasmValTypeVecT, WasmValVecT, WasmtimeErrorT)
+                     WasmValTypeT, WasmValTypeVecT(..), WasmValVecT(..),
+                     WasmtimeErrorT)
 import qualified Wasmtime.Raw as Raw
 
 data FuncType = FuncType ![WasmValKindT] ![WasmValKindT]
@@ -122,3 +126,45 @@ withWasmtimeInstance store module_ imports errorHandler handler = bracket before
 
     mid (Right (instance_, _)) = handler instance_
     mid (Left (err, _))        = errorHandler err
+
+getWasmInstanceExport :: Ptr WasmInstanceT -> Int -> IO (Maybe (Ptr WasmFuncT))
+getWasmInstanceExport instance_ idx =
+    Foreign.alloca $ \exportVec -> do
+        Raw.wasmInstanceExports instance_ exportVec
+        WasmExternVecT size exports <- Foreign.peek exportVec
+        if idx >= 0 && idx < fromIntegral size
+            then fmap Just . Raw.wasmExternAsFunc =<< Foreign.peekElemOff exports idx
+            else return Nothing
+
+withWasmtimeFuncCall :: Ptr WasmFuncT -> [WasmValT] -> (Ptr WasmtimeErrorT -> IO a) -> (Ptr WasmTrapT -> IO a) -> ([WasmValT] -> IO a) -> IO a
+withWasmtimeFuncCall func params errHandler trapHandler handler = do
+    resultArity <- Raw.wasmFuncResultArity func
+    bracket (before resultArity) after mid
+    where
+    before resultArity =
+        Foreign.alloca $ \paramVecPtr ->
+        Foreign.withArray params $ \paramPtr ->
+        Foreign.alloca $ \resultVecPtr ->
+        Foreign.alloca $ \trapPtr -> do
+            Raw.wasmValVecNew paramVecPtr (fromIntegral (length params)) paramPtr
+            Raw.wasmValVecNewUninitialized resultVecPtr (fromIntegral resultArity)
+            err <- Raw.wasmtimeFuncCall func paramVecPtr resultVecPtr trapPtr
+            trap <- Foreign.peek trapPtr
+            results <- if err == Foreign.nullPtr && trap == Foreign.nullPtr
+                then wasmValVecToList resultVecPtr
+                else return []
+            return (err, trap, results)
+
+    after (err, trap, _) = do
+        when (err /= Foreign.nullPtr) $ Raw.wasmtimeErrorDelete err
+        when (trap /= Foreign.nullPtr) $ Raw.wasmTrapDelete trap
+
+    mid (err, trap, results)
+        | err /= Foreign.nullPtr = errHandler err
+        | trap /= Foreign.nullPtr = trapHandler trap
+        | otherwise = handler results
+
+wasmValVecToList :: Ptr WasmValVecT -> IO [WasmValT]
+wasmValVecToList vecPtr = do
+    WasmValVecT size p <- Foreign.peek vecPtr
+    Foreign.peekArray (fromIntegral size) p
