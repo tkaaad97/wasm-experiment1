@@ -158,7 +158,7 @@ equality =
     Parser.option a $ do
         op <- Parser.choice
             [ symbol "==" $> Equ
-            , symbol "/=" $> Neq]
+            , symbol "!=" $> Neq]
         ExprBinary op a <$> relational
 
 relational :: Parser Expr
