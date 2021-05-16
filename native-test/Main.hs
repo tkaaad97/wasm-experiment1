@@ -14,6 +14,8 @@ foreign import ccall "printf" printf :: Ptr Word8 -> IO ()
 foreign import ccall "printf" printfI :: Ptr Word8 -> Word32 -> IO ()
 foreign import ccall "printf" printfSI :: Ptr Word8 -> Ptr Word8 -> Word32 -> IO ()
 foreign import ccall "printf" printfSII :: Ptr Word8 -> Ptr Word8 -> Word32 -> Word32 -> IO ()
+foreign import ccall "printf" printfSS :: Ptr Word8 -> Ptr Word8 -> Ptr Word8 -> IO ()
+foreign import ccall "printf" printfSSS :: Ptr Word8 -> Ptr Word8 -> Ptr Word8 -> Ptr Word8 -> IO ()
 
 printf' :: Ptr (Ptr Word8) -> Ptr WasmValVecT -> Ptr WasmValVecT -> IO (Ptr WasmTrapT)
 printf' memPtr paramVecPtr _ = do
@@ -59,6 +61,34 @@ printfSII' memPtr paramVecPtr _ = do
     printfSII (mem `Foreign.plusPtr` fromIntegral off) (mem `Foreign.plusPtr` fromIntegral off2) a b
     return Foreign.nullPtr
 
+printfSS' :: Ptr (Ptr Word8) -> Ptr WasmValVecT -> Ptr WasmValVecT -> IO (Ptr WasmTrapT)
+printfSS' memPtr paramVecPtr _ = do
+    WasmValVecT _ p <- Foreign.peek paramVecPtr
+    WasmValI64 offLen <- Foreign.peek p
+    WasmValI64 offLena <- Foreign.peekElemOff p 1
+    WasmValI64 offLenb  <- Foreign.peekElemOff p 2
+    let off = offLen .&. 0xFFFF
+        offa = offLena .&. 0xFFFF
+        offb = offLenb .&. 0xFFFF
+    mem <- Foreign.peek memPtr
+    printfSS (mem `Foreign.plusPtr` fromIntegral off) (mem `Foreign.plusPtr` fromIntegral offa) (mem `Foreign.plusPtr` fromIntegral offb)
+    return Foreign.nullPtr
+
+printfSSS' :: Ptr (Ptr Word8) -> Ptr WasmValVecT -> Ptr WasmValVecT -> IO (Ptr WasmTrapT)
+printfSSS' memPtr paramVecPtr _ = do
+    WasmValVecT _ p <- Foreign.peek paramVecPtr
+    WasmValI64 offLen <- Foreign.peek p
+    WasmValI64 offLena <- Foreign.peekElemOff p 1
+    WasmValI64 offLenb  <- Foreign.peekElemOff p 2
+    WasmValI64 offLenc  <- Foreign.peekElemOff p 3
+    let off = offLen .&. 0xFFFF
+        offa = offLena .&. 0xFFFF
+        offb = offLenb .&. 0xFFFF
+        offc = offLenc .&. 0xFFFF
+    mem <- Foreign.peek memPtr
+    printfSSS (mem `Foreign.plusPtr` fromIntegral off) (mem `Foreign.plusPtr` fromIntegral offa) (mem `Foreign.plusPtr` fromIntegral offb) (mem `Foreign.plusPtr` fromIntegral offc)
+    return Foreign.nullPtr
+
 printWasmTrap :: Foreign.Ptr WasmTrapT -> IO ()
 printWasmTrap = (putStrLn =<<) . getWasmTrapMessage
 
@@ -95,4 +125,6 @@ main =
         , (FuncType [wasmValKindI64, wasmValKindI32] [], printfI' memPtr)
         , (FuncType [wasmValKindI64, wasmValKindI64, wasmValKindI32] [], printfSI' memPtr)
         , (FuncType [wasmValKindI64, wasmValKindI64, wasmValKindI32, wasmValKindI32] [], printfSII' memPtr)
+        , (FuncType [wasmValKindI64, wasmValKindI64, wasmValKindI64] [], printfSS' memPtr)
+        , (FuncType [wasmValKindI64, wasmValKindI64, wasmValKindI64, wasmValKindI64] [], printfSSS' memPtr)
         ]
