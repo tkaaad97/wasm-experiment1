@@ -17,6 +17,7 @@ module SampleLang.Ast.Types
     , getLValueType
     , getReferenceType
     , getConstantType
+    , isFunctionType
     ) where
 
 import Data.Int (Int32)
@@ -112,3 +113,7 @@ getConstantType :: Constant -> Type'
 getConstantType ConstInt{}    = TypeInt
 getConstantType ConstBool{}   = TypeBool
 getConstantType ConstDouble{} = TypeDouble
+
+isFunctionType :: Type' -> Bool
+isFunctionType TypeFunction{} = True
+isFunctionType _              = False

@@ -17,7 +17,7 @@ spec = do
             gen case1 `shouldBe` Right expected1
 
 case1 :: R.Program
-case1 = R.Program (Vector.singleton func1) mempty mempty
+case1 = R.Program mempty (Vector.singleton func1) mempty mempty
     where
     func1 = R.Function "f1" (FunctionType [Parameter "" TypeInt, Parameter "" TypeInt] TypeVoid) mempty . Vector.singleton . R.StatementExpr $
         R.ExprBinary TypeInt Add (R.ExprReference TypeInt (ReferenceLocal (LocalVarIdx 0) TypeInt)) (R.ExprReference TypeInt (ReferenceLocal (LocalVarIdx 1) TypeInt))

@@ -38,10 +38,12 @@ getExprType (R.ExprStringLiteral _)        = TypeString
 
 resolve :: P.Ast -> Either String R.Program
 resolve ast = do
-    let funcs = pickFunctionDefinitions ast
+    let funcDeclTypeVec = pickFunctionDeclarations ast
+        funcs = pickFunctionDefinitions ast
         funcVec = Vector.fromList funcs
-        funcMap = Map.fromList . Vector.toList . Vector.imap (\i (P.FunctionDefinition name funcType _) -> (name, (FunctionIdx i, funcType))) $ funcVec
-    unless (Map.size funcMap == Vector.length funcVec) $ Left "function name duplication"
+        funcTypeVec = Vector.map (\(P.FunctionDefinition name funcType _) -> (name, funcType)) funcVec
+        funcMap = Map.fromList . Vector.toList . Vector.imap (\i (name, funcType) -> (name, (FunctionIdx i, funcType))) $ funcDeclTypeVec <> funcTypeVec
+    unless (Map.size funcMap == Vector.length funcDeclTypeVec + Vector.length funcTypeVec) $ Left "function name duplication"
 
     let gvars = pickGlobalVars ast
         gvarMap = Map.fromList . Vector.toList . Vector.imap (\i (GlobalVar name type_) -> (name, (GlobalVarIdx i, type_))) . Vector.fromList $ map fst gvars
@@ -50,10 +52,10 @@ resolve ast = do
     let strVec = pickStringLiterals ast
         strMap = Map.fromList . Vector.toList . Vector.map (\(str, offLen) -> (str, offLen)) $ strVec
 
-    resolvedFuncVec <- Vector.mapM (resolveFunction funcMap strMap gvarMap) funcVec
+    resolvedFuncVec <- Vector.mapM (resolveFunction funcMap strMap gvarMap) . Vector.fromList $ funcs
 
     gvarVec <- Vector.mapM resolveGVar . Vector.fromList $ gvars
-    return (R.Program resolvedFuncVec strVec gvarVec)
+    return (R.Program funcDeclTypeVec resolvedFuncVec strVec gvarVec)
 
 resolveGVar :: (GlobalVar, Maybe P.Expr) -> Either String (GlobalVar, Maybe R.Expr)
 resolveGVar (gvar, Nothing) = return (gvar, Nothing)
@@ -253,11 +255,20 @@ pickFunctionDefinitions (P.Ast xs) = mapMaybe isFuncDef xs
     isFuncDef (P.Decl _)    = Nothing
     isFuncDef (P.FuncDef a) = Just a
 
+pickFunctionDeclarations :: P.Ast -> Vector (Text, FunctionType)
+pickFunctionDeclarations (P.Ast xs) = Vector.fromList . mapMaybe isFuncDecl $ xs
+    where
+    isFuncDecl (P.Decl (P.Declaration (Parameter name (TypeFunction funcType)) _))
+        = Just (name, funcType)
+    isFuncDecl _ = Nothing
+
 pickGlobalVars :: P.Ast -> [(GlobalVar, Maybe P.Expr)]
 pickGlobalVars (P.Ast xs) = mapMaybe isDecl xs
     where
-    isDecl (P.Decl (P.Declaration (Parameter name type_) initializer)) = Just (GlobalVar name type_, initializer)
-    isDecl (P.FuncDef _)                                               = Nothing
+    isDecl (P.Decl (P.Declaration (Parameter name type_) initializer))
+        | isFunctionType type_ = Nothing
+        | otherwise = Just (GlobalVar name type_, initializer)
+    isDecl (P.FuncDef _) = Nothing
 
 pickLocalVars :: P.FunctionDefinition -> Vector LocalVar
 pickLocalVars (P.FunctionDefinition _ funcType statements) =

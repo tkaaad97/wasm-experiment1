@@ -47,7 +47,8 @@ data Function = Function
     } deriving (Show, Eq)
 
 data Program = Program
-    { programFunctions      :: !(Vector Function)
-    , programStringLiterals :: !(Vector (Text, Word64))
-    , programGlobalVars     :: !(Vector (GlobalVar, Maybe Expr))
+    { programExternalFunctions :: !(Vector (Text, FunctionType))
+    , programFunctions         :: !(Vector Function)
+    , programStringLiterals    :: !(Vector (Text, Word64))
+    , programGlobalVars        :: !(Vector (GlobalVar, Maybe Expr))
     } deriving (Show, Eq)

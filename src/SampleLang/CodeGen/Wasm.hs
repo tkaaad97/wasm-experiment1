@@ -21,7 +21,7 @@ import qualified Wasm.Types as Wasm
 data WasmFunc = WasmFunc !Text !Wasm.FuncType !(Vector Wasm.ValType) !(Vector Wasm.Instr)
 
 gen :: R.Program -> Either String Wasm.Module
-gen (R.Program funcs strs globals) = do
+gen (R.Program _ funcs strs globals) = do
     wasmFuncVec <- Vector.mapM genFunction funcs
     globalVec <- Vector.mapM genGlobal globals
     let typeVec = Vector.map (\(WasmFunc _ type_ _ _) -> type_) wasmFuncVec
