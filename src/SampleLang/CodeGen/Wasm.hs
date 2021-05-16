@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module SampleLang.CodeGen.Wasm
     ( genExpr
     , genStatement
@@ -8,8 +9,8 @@ module SampleLang.CodeGen.Wasm
 import Data.Bits ((.&.))
 import Data.Text (Text)
 import Data.Vector (Vector)
-import qualified Data.Vector as Vector (drop, foldM', fromList, imap, length,
-                                        map, mapM, null, singleton)
+import qualified Data.Vector as Vector (cons, drop, foldM', fromList, imap,
+                                        length, map, mapM, null, singleton)
 import qualified SampleLang.Ast.Resolved as R
 import SampleLang.Ast.Types
 import qualified SampleLang.Resolve as R (getExprType)
@@ -27,9 +28,12 @@ gen (R.Program funcDecls funcs strs globals) = do
     let typeVec = Vector.map (\(WasmFunc _ type_ _ _) -> type_) wasmFuncVec
         importVec = Vector.map genFunctionDeclaration funcDecls
         funcVec = Vector.imap (\i (WasmFunc _ _ locals instrVec) -> Wasm.Func (fromIntegral i) locals instrVec) wasmFuncVec
-        exportVec = Vector.imap (\i (WasmFunc name _ _ _) -> Wasm.Export name (Wasm.ExportFunc (fromIntegral i))) wasmFuncVec
-        dataVec = Vector.map (\(s, offLen) -> Wasm.DataSegment s . Just . fromIntegral $ offLen .&. 0xFFFF) strs
         memoryVec = if Vector.null dataVec then mempty else Vector.singleton (Wasm.Memory (Wasm.Limits 1 Nothing))
+        exportVec =
+            if Vector.null memoryVec
+                then Vector.imap (\i (WasmFunc name _ _ _) -> Wasm.Export name (Wasm.ExportFunc (fromIntegral i))) wasmFuncVec
+                else Wasm.Export "memory" (Wasm.ExportMemory 0) `Vector.cons` Vector.imap (\i (WasmFunc name _ _ _) -> Wasm.Export name (Wasm.ExportFunc (fromIntegral (i + Vector.length importVec)))) wasmFuncVec
+        dataVec = Vector.map (\(s, offLen) -> Wasm.DataSegment s . Just . fromIntegral $ offLen .&. 0xFFFF) strs
         wasm = Wasm.Module
             { Wasm.moduleFuncs = funcVec
             , Wasm.moduleGlobals = globalVec
