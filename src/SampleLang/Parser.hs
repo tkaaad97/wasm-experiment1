@@ -76,10 +76,10 @@ unary =
     Parser.try decrement <|>
     postfix
     where
-    negate_ = symbol "-" *> (ExprUnary Negate <$> expr)
-    not_ = symbol "!" *> (ExprUnary Not <$> expr)
-    increment = symbol "++" *> (ExprUnary Increment <$> expr)
-    decrement = symbol "--" *> (ExprUnary Decrement <$> expr)
+    negate_ = symbol "-" *> (ExprUnary Negate <$> primary)
+    not_ = symbol "!" *> (ExprUnary Not <$> primary)
+    increment = symbol "++" *> (ExprUnary Increment <$> primary)
+    decrement = symbol "--" *> (ExprUnary Decrement <$> primary)
 
 postfix :: Parser Expr
 postfix =
