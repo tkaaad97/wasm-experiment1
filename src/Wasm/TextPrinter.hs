@@ -308,5 +308,5 @@ buildDataSegment i (DataSegment s (Just off)) = mconcat ["(data ", buildIndexCom
 buildStringLiteral :: Text -> Builder
 buildStringLiteral s = "\"" <> Builder.fromString (Text.foldl' (\a c -> a . showLitChar c) id s "") <> "\""
     where
-    showLitChar '\0' s = "\\00" ++ s
-    showLitChar c s    = Char.showLitChar c s
+    showLitChar '\0' x = "\\00" ++ x
+    showLitChar c x    = Char.showLitChar c x
