@@ -266,15 +266,17 @@ statement =
     returnStatement =
         symbol "return" *> (StatementReturn <$> Parser.optional expr) <* symbol ";"
 
-functionDefinition :: Parser FunctionDefinition
-functionDefinition =
+functionDeclarationOrDefinition :: Parser DeclOrFuncDef
+functionDeclarationOrDefinition =
     Lexer.lexeme Char.space $ do
     returnType <- primitiveType
     name <- identifier
     params <- parens (Parser.try parameters <|> return [])
-    body <- braces (Parser.many statement)
+    maybeBody <- (symbol ";" $> Nothing) <|> (fmap Just . braces $ Parser.many statement)
     let funcType = FunctionType params returnType
-    return (FunctionDefinition name funcType body)
+    case maybeBody of
+        Just body -> return (FuncDef (FunctionDefinition name funcType body))
+        Nothing -> return (Decl (Declaration (Parameter name (TypeFunction funcType)) Nothing))
     where
     parameters = do
         x <- parameter
@@ -284,7 +286,7 @@ functionDefinition =
 program :: Parser Ast
 program =
     fmap Ast . Lexer.lexeme Char.space . Parser.many $
-        Parser.try globalVarDecl <|> FuncDef <$> functionDefinition
+        Parser.try globalVarDecl <|> functionDeclarationOrDefinition
     where
     globalVarDecl = Decl <$> (declarationWithInitializer <* symbol ";")
 
