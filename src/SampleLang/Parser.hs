@@ -154,24 +154,26 @@ assignment =
 equality :: Parser Expr
 equality =
     Lexer.lexeme Char.space $ do
-    a <- relational
-    Parser.option a $ do
-        op <- Parser.choice
-            [ symbol "==" $> Equ
-            , symbol "!=" $> Neq]
-        ExprBinary op a <$> relational
+        e <- relational
+        xs <- Parser.many $ do
+            op <- Parser.choice
+                [ symbol "==" $> Equ
+                , symbol "!=" $> Neq]
+            (,) op <$> relational
+        return $ foldl' (\a (op, b) -> ExprBinary op a b) e xs
 
 relational :: Parser Expr
 relational =
     Lexer.lexeme Char.space $ do
-        a <- addSub
-        Parser.option a $ do
+        e <- addSub
+        xs <- Parser.many $ do
             op <- Parser.choice
                 [ symbol "<" $> Lt
                 , symbol "<=" $> Le
                 , symbol ">" $> Gt
                 , symbol ">=" $> Ge]
-            ExprBinary op a <$> addSub
+            (,) op <$> addSub
+        return $ foldl' (\a (op, b) -> ExprBinary op a b) e xs
 
 voidType :: Parser Type'
 voidType = symbol "void" $> TypeVoid
