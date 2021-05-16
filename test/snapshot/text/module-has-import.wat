@@ -1,3 +1,3 @@
 (module
-  (import "importmod" "print" (func (param i32)))
+  (import (;0;) "importmod" "print" (func (param i32)))
 )

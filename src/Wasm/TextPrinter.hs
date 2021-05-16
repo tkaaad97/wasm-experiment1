@@ -14,7 +14,7 @@ import qualified Data.Text.Lazy.Builder as Builder (fromString, fromText,
 import qualified Data.Text.Lazy.Builder.Int as Builder (decimal)
 import qualified Data.Text.Lazy.Builder.RealFloat as Builder (realFloat)
 import Data.Vector (Vector)
-import qualified Data.Vector as Vector (imap, map, toList, (!))
+import qualified Data.Vector as Vector (imap, length, map, toList, (!))
 import Wasm.Types
 
 printText :: Module -> Text
@@ -27,10 +27,10 @@ buildModule :: Module -> Builder
 buildModule m =
     intercalateBuilder "\n  "
         ( ["(module"] ++
-          buildTypes types ++
-          buildFuncs types funcs ++
-          buildGlobals globals ++
           buildImports imports ++
+          buildTypes types ++
+          buildFuncs (Vector.length imports) types funcs ++
+          buildGlobals globals ++
           buildExports exports ++
           buildMemories memories ++
           buildDataSegments datas
@@ -95,13 +95,13 @@ buildValType (NumType F64)       = "f64"
 buildValType (RefType ExternRef) = "externref"
 buildValType (RefType FuncRef)   = "funcref"
 
-buildFuncs :: Vector FuncType -> Vector Func -> [Builder]
-buildFuncs types = Vector.toList . Vector.imap f
+buildFuncs :: Int -> Vector FuncType -> Vector Func -> [Builder]
+buildFuncs start types = Vector.toList . Vector.imap f
     where
     f idx func =
         let tidx = fromIntegral (funcType func)
             ftype = types Vector.! tidx
-        in buildFunc ftype idx func
+        in buildFunc ftype (start + idx) func
 
 buildFunc :: FuncType -> Int -> Func -> Builder
 buildFunc (FuncType (ResultType params) (ResultType results)) funcidx (Func typeidx locals body) =
@@ -268,12 +268,13 @@ buildGlobalType Const valType = buildValType valType
 buildGlobalType Var valType   = "(mut " <> buildValType valType <> ")"
 
 buildImports :: Vector Import -> [Builder]
-buildImports = Vector.toList . Vector.map buildImport
+buildImports = Vector.toList . Vector.imap buildImport
 
-buildImport :: Import -> Builder
-buildImport (Import moduleName name (ImportFunc (FuncType (ResultType params) (ResultType results)))) =
+buildImport :: Int -> Import -> Builder
+buildImport idx (Import moduleName name (ImportFunc (FuncType (ResultType params) (ResultType results)))) =
     intercalateBuilder " "
     ["(import"
+    , buildIndexComment idx
     , "\"" <> Builder.fromText moduleName <> "\""
     , "\"" <> Builder.fromText name <> "\""
     , intercalateBuilder " " (["(func"] ++ [ buildParam params | not (null params) ] ++ [ buildResult results | not (null results) ]) <> ")"

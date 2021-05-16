@@ -8,8 +8,8 @@ module SampleLang.CodeGen.Wasm
 import Data.Bits ((.&.))
 import Data.Text (Text)
 import Data.Vector (Vector)
-import qualified Data.Vector as Vector (drop, foldM', fromList, imap, map, mapM,
-                                        null, singleton)
+import qualified Data.Vector as Vector (drop, foldM', fromList, imap, length,
+                                        map, mapM, null, singleton)
 import qualified SampleLang.Ast.Resolved as R
 import SampleLang.Ast.Types
 import qualified SampleLang.Resolve as R (getExprType)
@@ -21,10 +21,11 @@ import qualified Wasm.Types as Wasm
 data WasmFunc = WasmFunc !Text !Wasm.FuncType !(Vector Wasm.ValType) !(Vector Wasm.Instr)
 
 gen :: R.Program -> Either String Wasm.Module
-gen (R.Program _ funcs strs globals) = do
+gen (R.Program funcDecls funcs strs globals) = do
     wasmFuncVec <- Vector.mapM genFunction funcs
     globalVec <- Vector.mapM genGlobal globals
     let typeVec = Vector.map (\(WasmFunc _ type_ _ _) -> type_) wasmFuncVec
+        importVec = Vector.map genFunctionDeclaration funcDecls
         funcVec = Vector.imap (\i (WasmFunc _ _ locals instrVec) -> Wasm.Func (fromIntegral i) locals instrVec) wasmFuncVec
         exportVec = Vector.imap (\i (WasmFunc name _ _ _) -> Wasm.Export name (Wasm.ExportFunc (fromIntegral i))) wasmFuncVec
         dataVec = Vector.map (\(s, offLen) -> Wasm.DataSegment s . Just . fromIntegral $ offLen .&. 0xFFFF) strs
@@ -34,7 +35,7 @@ gen (R.Program _ funcs strs globals) = do
             , Wasm.moduleGlobals = globalVec
             , Wasm.moduleMemories = memoryVec
             , Wasm.moduleTypes = typeVec
-            , Wasm.moduleImports = mempty
+            , Wasm.moduleImports = importVec
             , Wasm.moduleExports = exportVec
             , Wasm.moduleDatas = dataVec
             }
@@ -259,6 +260,11 @@ genFunction (R.Function name funcType locals body) = do
         localVec = genLocalVec (Vector.drop (length params) locals)
         type_ = genFunctionType funcType
     return (WasmFunc name type_ localVec instrVec)
+
+genFunctionDeclaration :: (Text, FunctionType) -> Wasm.Import
+genFunctionDeclaration (name, funcType) =
+    let type_ = genFunctionType funcType
+    in Wasm.Import mempty name (Wasm.ImportFunc type_)
 
 genGlobal :: (GlobalVar, Maybe R.Expr) -> Either String Wasm.Global
 genGlobal (GlobalVar _ TypeInt, Just (R.ExprConstant TypeInt (ConstInt a))) = return (Wasm.Global Wasm.Var (Wasm.NumType Wasm.I32) (Wasm.I32Const (fromIntegral a)))
