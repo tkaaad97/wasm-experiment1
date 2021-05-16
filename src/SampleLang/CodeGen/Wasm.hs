@@ -21,8 +21,9 @@ import qualified Wasm.Types as Wasm
 data WasmFunc = WasmFunc !Text !Wasm.FuncType !(Vector Wasm.ValType) !(Vector Wasm.Instr)
 
 gen :: R.Program -> Either String Wasm.Module
-gen (R.Program funcs strs _) = do
+gen (R.Program funcs strs globals) = do
     wasmFuncVec <- Vector.mapM genFunction funcs
+    globalVec <- Vector.mapM genGlobal globals
     let typeVec = Vector.map (\(WasmFunc _ type_ _ _) -> type_) wasmFuncVec
         funcVec = Vector.imap (\i (WasmFunc _ _ locals instrVec) -> Wasm.Func (fromIntegral i) locals instrVec) wasmFuncVec
         exportVec = Vector.imap (\i (WasmFunc name _ _ _) -> Wasm.Export name (Wasm.ExportFunc (fromIntegral i))) wasmFuncVec
@@ -30,7 +31,7 @@ gen (R.Program funcs strs _) = do
         memoryVec = if Vector.null dataVec then mempty else Vector.singleton (Wasm.Memory (Wasm.Limits 1 Nothing))
         wasm = Wasm.Module
             { Wasm.moduleFuncs = funcVec
-            , Wasm.moduleGlobals = mempty
+            , Wasm.moduleGlobals = globalVec
             , Wasm.moduleMemories = memoryVec
             , Wasm.moduleTypes = typeVec
             , Wasm.moduleImports = mempty
@@ -258,6 +259,17 @@ genFunction (R.Function name funcType locals body) = do
         localVec = genLocalVec (Vector.drop (length params) locals)
         type_ = genFunctionType funcType
     return (WasmFunc name type_ localVec instrVec)
+
+genGlobal :: (GlobalVar, Maybe R.Expr) -> Either String Wasm.Global
+genGlobal (GlobalVar _ TypeInt, Just (R.ExprConstant TypeInt (ConstInt a))) = return (Wasm.Global Wasm.Var (Wasm.NumType Wasm.I32) (Wasm.I32Const (fromIntegral a)))
+genGlobal (GlobalVar _ TypeInt, Nothing) = return (Wasm.Global Wasm.Var (Wasm.NumType Wasm.I32) (Wasm.I32Const 0))
+genGlobal (GlobalVar _ TypeBool, Just (R.ExprConstant TypeBool (ConstBool a))) = return (Wasm.Global Wasm.Var (Wasm.NumType Wasm.I32) (Wasm.I32Const (if a then 1 else 0)))
+genGlobal (GlobalVar _ TypeBool, Nothing) = return (Wasm.Global Wasm.Var (Wasm.NumType Wasm.I32) (Wasm.I32Const 0))
+genGlobal (GlobalVar _ TypeDouble, Just (R.ExprConstant TypeDouble (ConstDouble a))) = return (Wasm.Global Wasm.Var (Wasm.NumType Wasm.F64) (Wasm.F64Const a))
+genGlobal (GlobalVar _ TypeDouble, Nothing) = return (Wasm.Global Wasm.Var (Wasm.NumType Wasm.F64) (Wasm.F64Const 0))
+genGlobal (GlobalVar _ TypeString, Just (R.ExprStringLiteral a)) = return (Wasm.Global Wasm.Var (Wasm.NumType Wasm.I64) (Wasm.I64Const a))
+genGlobal (GlobalVar _ TypeString, Nothing) = return (Wasm.Global Wasm.Var (Wasm.NumType Wasm.I64) (Wasm.I64Const 0))
+genGlobal e = Left $ "genGlobal failed: " ++ show e
 
 genLocalVec :: Vector LocalVar -> Vector Wasm.ValType
 genLocalVec = Vector.map $ \(LocalVar _ type_) -> toValType type_

@@ -52,12 +52,12 @@ resolve ast = do
 
     resolvedFuncVec <- Vector.mapM (resolveFunction funcMap strMap gvarMap) funcVec
 
-    gvarVec <- Vector.mapM (resolveGVar funcMap strMap gvarMap) . Vector.fromList $ gvars
+    gvarVec <- Vector.mapM resolveGVar . Vector.fromList $ gvars
     return (R.Program resolvedFuncVec strVec gvarVec)
 
-resolveGVar :: Map Text (FunctionIdx, FunctionType) -> Map Text Word64 -> Map Text (GlobalVarIdx, Type') -> (GlobalVar, Maybe P.Expr) -> Either String (GlobalVar, Maybe R.Expr)
-resolveGVar _ _ _ (gvar, Nothing) = return (gvar, Nothing)
-resolveGVar funcMap strMap gvarMap (gvar, Just initializer) = (,) gvar . Just <$> resolveExpr funcMap strMap gvarMap mempty initializer
+resolveGVar :: (GlobalVar, Maybe P.Expr) -> Either String (GlobalVar, Maybe R.Expr)
+resolveGVar (gvar, Nothing) = return (gvar, Nothing)
+resolveGVar (gvar, Just initializer) = (,) gvar . Just <$> resolveConstantExpr initializer
 
 resolveFunction :: Map Text (FunctionIdx, FunctionType) -> Map Text Word64 -> Map Text (GlobalVarIdx, Type') -> P.FunctionDefinition -> Either String R.Function
 resolveFunction funcMap strMap gvarMap funcDef = do
@@ -139,6 +139,10 @@ resolveExpr funcMap strMap gvarMap lvarMap (P.ExprFunctionCall name args) = do
 resolveExpr _ strMap _ _ (P.ExprStringLiteral s) = do
     offLen <- maybe (Left $ "failed to resolve string literalx: " ++ Text.unpack s) return $ Map.lookup s strMap
     return (R.ExprStringLiteral offLen)
+
+resolveConstantExpr :: P.Expr -> Either String R.Expr
+resolveConstantExpr (P.ExprConstant a) = return (R.ExprConstant (getConstantType a) a)
+resolveConstantExpr e = Left $ "invalid constant expression: " ++ show e
 
 resolveUnOpType :: UnOp -> Type' -> Either String Type'
 resolveUnOpType Negate TypeInt = return TypeInt
