@@ -10,10 +10,10 @@ import System.Process (callCommand)
 import Wasmtime
 import Wasmtime.Raw as Wasmtime
 
-foreign import ccall "printf" printf :: Ptr () -> IO ()
-foreign import ccall "printf" printfI :: Ptr () -> Word32 -> IO ()
-foreign import ccall "printf" printfSI :: Ptr () -> Ptr () -> Word32 -> IO ()
-foreign import ccall "printf" printfSII :: Ptr () -> Ptr () -> Word32 -> Word32 -> IO ()
+foreign import ccall "printf" printf :: Ptr Word8 -> IO ()
+foreign import ccall "printf" printfI :: Ptr Word8 -> Word32 -> IO ()
+foreign import ccall "printf" printfSI :: Ptr Word8 -> Ptr Word8 -> Word32 -> IO ()
+foreign import ccall "printf" printfSII :: Ptr Word8 -> Ptr Word8 -> Word32 -> Word32 -> IO ()
 
 printf' :: Ptr (Ptr Word8) -> Ptr WasmValVecT -> Ptr WasmValVecT -> IO (Ptr WasmTrapT)
 printf' memPtr paramVecPtr _ = do
@@ -59,6 +59,9 @@ printfSII' memPtr paramVecPtr _ = do
     printfSII (mem `Foreign.plusPtr` fromIntegral off) (mem `Foreign.plusPtr` fromIntegral off2) a b
     return Foreign.nullPtr
 
+printWasmTrap :: Foreign.Ptr WasmTrapT -> IO ()
+printWasmTrap = (putStrLn =<<) . getWasmTrapMessage
+
 printWasmtimeError :: Foreign.Ptr WasmtimeErrorT -> IO ()
 printWasmtimeError = (putStrLn =<<) . getWasmtimeErrorMessage
 
@@ -77,7 +80,7 @@ main =
                     memData <- wasmMemoryData mem
                     Foreign.poke memPtr memData
                     func <- getExportFunc exports 1
-                    withWasmtimeFuncCall func [] printWasmtimeError (const $ putStrLn "trap") $ \results ->
+                    withWasmtimeFuncCall func [] printWasmtimeError printWasmTrap $ \results ->
                         putStrLn $ "results: " ++ show results
     where
     getExportFunc xs idx

@@ -7,21 +7,6 @@ void printf_s_i_i(string s, string a, int b, int c);
 
 int failure = 0;
 
-void foo() { printf("OK\n"); }
-
-int add(int a, int b) { return a + b; }
-
-bool assert_int(int expected, int actual, string expr) {
-    if (actual == expected) {
-        printf_s_i("OK %s => %d\n", expr, actual);
-        return true;
-    } else {
-        printf_s_i_i("NG %s => %d expected, but got %d\n", expr, expected, actual);
-        failure = failure + 1;
-        return false;
-    }
-}
-
 int main() {
     printf("start test\n");
     assert_int(0, WITH_STR(0));
@@ -40,4 +25,19 @@ int main() {
     }
 
     return failure;
+}
+
+void foo() { printf("OK\n"); }
+
+int add(int a, int b) { return a + b; }
+
+bool assert_int(int expected, int actual, string expr) {
+    if (actual == expected) {
+        printf_s_i("OK %s => %d\n", expr, actual);
+        return true;
+    } else {
+        printf_s_i_i("NG %s => %d expected, but got %d\n", expr, expected, actual);
+        failure = failure + 1;
+    }
+    return false;
 }

@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 module Wasmtime
     ( FuncType(..)
     , WasmByteT
@@ -30,6 +29,7 @@ module Wasmtime
     , withWasmtimeFuncCall
     , wasmValVecToList
     , wat2Wasm
+    , getWasmTrapMessage
     , getWasmtimeErrorMessage
     ) where
 
@@ -119,7 +119,7 @@ withWasmtimeInstance store module_ imports errorHandler handler = bracket before
 
         Foreign.alloca $ \importVec ->
             Foreign.alloca $ \pp ->
-            Foreign.alloca $ \trap -> do
+            Foreign.with Foreign.nullPtr $ \trap -> do
                 Foreign.withArray externs $ Raw.wasmExternVecNew importVec (fromIntegral (length imports))
                 err <- Raw.wasmtimeInstanceNew store module_ importVec pp trap
                 Raw.wasmExternVecDelete importVec
@@ -166,12 +166,12 @@ withWasmtimeFuncCall func params errHandler trapHandler handler = do
         Foreign.alloca $ \paramVecPtr ->
         Foreign.withArray params $ \paramPtr ->
         Foreign.alloca $ \resultVecPtr ->
-        Foreign.alloca $ \trapPtr -> do
+        Foreign.with Foreign.nullPtr $ \trapPtr -> do
             Raw.wasmValVecNew paramVecPtr (fromIntegral (length params)) paramPtr
             Raw.wasmValVecNewUninitialized resultVecPtr (fromIntegral resultArity)
             err <- Raw.wasmtimeFuncCall func paramVecPtr resultVecPtr trapPtr
             trap <- Foreign.peek trapPtr
-            results <- if err == Foreign.nullPtr && trap == Foreign.nullPtr
+            results <- if err == Foreign.nullPtr && trap == Foreign.nullPtr && resultVecPtr /= Foreign.nullPtr
                 then wasmValVecToList resultVecPtr
                 else return []
             Raw.wasmValVecDelete paramVecPtr
@@ -201,10 +201,21 @@ wat2Wasm wat =
         err <- Raw.wasmtimeWat2Wasm sourceVec destVec
         unless (err == Foreign.nullPtr) $ throwIO . userError =<< getWasmtimeErrorMessage err
         WasmByteVecT len mp <- Foreign.peek destVec
-        !wasm <- ByteString.packCStringLen (Foreign.castPtr mp, fromIntegral len)
+        wasm <- ByteString.packCStringLen (Foreign.castPtr mp, fromIntegral len)
         Raw.wasmByteVecDelete sourceVec
         Raw.wasmByteVecDelete destVec
         return wasm
+
+getWasmTrapMessage :: Ptr WasmTrapT -> IO String
+getWasmTrapMessage trap
+    | trap /= Foreign.nullPtr =
+        Foreign.alloca $ \p -> do
+            Raw.wasmTrapMessage trap p
+            WasmByteVecT len mp <- Foreign.peek p
+            str <- Foreign.peekCStringLen (Foreign.castPtr mp, fromIntegral len)
+            Raw.wasmByteVecDelete p
+            return str
+    | otherwise = return ""
 
 getWasmtimeErrorMessage :: Ptr WasmtimeErrorT -> IO String
 getWasmtimeErrorMessage err

@@ -306,4 +306,7 @@ buildDataSegment i (DataSegment s Nothing) = mconcat ["(data ", buildIndexCommen
 buildDataSegment i (DataSegment s (Just off)) = mconcat ["(data ", buildIndexComment i, " (i32.const ", Builder.decimal off ,") ", buildStringLiteral s, ")"]
 
 buildStringLiteral :: Text -> Builder
-buildStringLiteral s = "\"" <> Builder.fromString (Text.foldl' (\a c -> a . Char.showLitChar c) id s "") <> "\""
+buildStringLiteral s = "\"" <> Builder.fromString (Text.foldl' (\a c -> a . showLitChar c) id s "") <> "\""
+    where
+    showLitChar '\0' s = "\\00" ++ s
+    showLitChar c s    = Char.showLitChar c s

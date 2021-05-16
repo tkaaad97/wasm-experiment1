@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7702d7381ccad2c943812188411428e979a7eb28b275443f16dc20b964ad6f11
+-- hash: e8000ce7edd75d1893f332a429181f5ddd0a230c33683f508390e1d3e9728676
 
 name:           wasm-experiment1
 version:        0.1.0.0
@@ -64,6 +64,26 @@ executable compiler
     , wasm-experiment1
   default-language: Haskell2010
 
+executable native-test
+  main-is: Main.hs
+  other-modules:
+      Paths_wasm_experiment1
+  hs-source-dirs:
+      native-test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -Wtabs
+  build-depends:
+      base >=4.8 && <5
+    , bytestring
+    , containers
+    , filepath
+    , megaparsec
+    , process
+    , text
+    , vector
+    , vector-builder
+    , wasm-experiment1
+  default-language: Haskell2010
+
 executable wasmtime-example
   main-is: Main.hs
   other-modules:
@@ -77,27 +97,6 @@ executable wasmtime-example
     , containers
     , filepath
     , megaparsec
-    , text
-    , vector
-    , vector-builder
-    , wasm-experiment1
-  default-language: Haskell2010
-
-test-suite native-test
-  type: exitcode-stdio-1.0
-  main-is: Main.hs
-  other-modules:
-      Paths_wasm_experiment1
-  hs-source-dirs:
-      native-test
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wredundant-constraints -Wtabs -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-      base >=4.8 && <5
-    , bytestring
-    , containers
-    , filepath
-    , megaparsec
-    , process
     , text
     , vector
     , vector-builder

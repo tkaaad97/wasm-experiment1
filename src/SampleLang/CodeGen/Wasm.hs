@@ -8,6 +8,7 @@ module SampleLang.CodeGen.Wasm
 
 import Data.Bits ((.&.))
 import Data.Text (Text)
+import qualified Data.Text as Text (snoc)
 import Data.Vector (Vector)
 import qualified Data.Vector as Vector (cons, drop, foldM', fromList, imap,
                                         length, map, mapM, null, singleton)
@@ -28,12 +29,12 @@ gen (R.Program funcDecls funcs strs globals) = do
     let typeVec = Vector.map (\(WasmFunc _ type_ _ _) -> type_) wasmFuncVec
         importVec = Vector.map genFunctionDeclaration funcDecls
         funcVec = Vector.imap (\i (WasmFunc _ _ locals instrVec) -> Wasm.Func (fromIntegral i) locals instrVec) wasmFuncVec
-        memoryVec = if Vector.null dataVec then mempty else Vector.singleton (Wasm.Memory (Wasm.Limits 1 Nothing))
+        memoryVec = if Vector.null dataVec then mempty else Vector.singleton (Wasm.Memory (Wasm.Limits 1 (Just 10)))
         exportVec =
             if Vector.null memoryVec
                 then Vector.imap (\i (WasmFunc name _ _ _) -> Wasm.Export name (Wasm.ExportFunc (fromIntegral i))) wasmFuncVec
                 else Wasm.Export "memory" (Wasm.ExportMemory 0) `Vector.cons` Vector.imap (\i (WasmFunc name _ _ _) -> Wasm.Export name (Wasm.ExportFunc (fromIntegral (i + Vector.length importVec)))) wasmFuncVec
-        dataVec = Vector.map (\(s, offLen) -> Wasm.DataSegment s . Just . fromIntegral $ offLen .&. 0xFFFF) strs
+        dataVec = Vector.map (\(s, offLen) -> Wasm.DataSegment (s `Text.snoc` '\0') . Just . fromIntegral $ offLen .&. 0xFFFF) strs
         wasm = Wasm.Module
             { Wasm.moduleFuncs = funcVec
             , Wasm.moduleGlobals = globalVec
@@ -251,7 +252,7 @@ genStatement _ (R.StatementExpr e)
     | R.getExprType e == TypeVoid = genExpr e
     | otherwise = (<> Builder.singleton Wasm.Drop) <$> genExpr e
 genStatement _ (R.StatementDecl (R.Declaration _ _ Nothing)) = return Builder.empty
-genStatement _ (R.StatementDecl (R.Declaration _ lvalue (Just initializer))) = genAssign lvalue initializer
+genStatement _ (R.StatementDecl (R.Declaration _ lvalue (Just initializer))) = (<> Builder.singleton Wasm.Drop) <$> genAssign lvalue initializer
 genStatement breakLabel R.StatementBreak = return (Builder.singleton (Wasm.Br (fromIntegral breakLabel)))
 genStatement _ (R.StatementReturn Nothing) = return (Builder.singleton Wasm.Return)
 genStatement _ (R.StatementReturn (Just e)) = (<> Builder.singleton Wasm.Return) <$> genExpr e
