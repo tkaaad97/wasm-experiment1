@@ -24,6 +24,14 @@ int main() {
     assert_bool(false, WITH_STR(99!=99));
     assert_bool(true, WITH_STR(1!=0));
     assert_bool(true, WITH_STR((5*(9-6)==15)==true));
+    assert_bool(true, WITH_STR(-1<989));
+    assert_bool(false, WITH_STR(1000-1<=989));
+    assert_bool(true, WITH_STR(1000-11<=989));
+    assert_bool(true, WITH_STR(1+1+1+1>1));
+    assert_bool(false, WITH_STR(1>1+1+1+1));
+    assert_bool(true, WITH_STR(1+1+1+1>=1));
+    assert_bool(false, WITH_STR(1>=1+1+1+1));
+    assert_bool(true, WITH_STR(1+1+1+1>=1+1+1+1));
 
     if (failure == 0) {
         printf("all test passed.\n");

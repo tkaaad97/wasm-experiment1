@@ -168,10 +168,11 @@ relational =
         e <- addSub
         xs <- Parser.many $ do
             op <- Parser.choice
-                [ symbol "<" $> Lt
-                , symbol "<=" $> Le
+                [ symbol "<=" $> Le
+                , symbol "<" $> Lt
+                , symbol ">=" $> Ge
                 , symbol ">" $> Gt
-                , symbol ">=" $> Ge]
+                ]
             (,) op <$> addSub
         return $ foldl' (\a (op, b) -> ExprBinary op a b) e xs
 
