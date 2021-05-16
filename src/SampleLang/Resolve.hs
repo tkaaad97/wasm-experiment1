@@ -290,7 +290,7 @@ pickStringLiterals :: P.Ast -> Vector (Text, Word64)
 pickStringLiterals (P.Ast xs) = snd . mapAccumL f 0 . Vector.fromList . nubOrd . catMaybes . concatMap pick $ xs
     where
     f off s =
-        let len = textByteSize s :: Word64
+        let len = textByteSize s + 1 :: Word64
         in (off + len, (s, Bits.shift len 32 .|. (off .&. 0xFFFF)))
     textByteSize = fromIntegral . ByteString.length . Text.encodeUtf8
 
