@@ -19,7 +19,7 @@ int main() {
     assert_int(1, WITH_STR((-1-2)/-3));
 
     if (failure == 0) {
-        printf("all test passed.");
+        printf("all test passed.\n");
     } else {
         printf_i("%d tests failed.\n", failure);
     }
