@@ -260,11 +260,15 @@ genStatement _ (R.StatementReturn (Just e)) = (<> Builder.singleton Wasm.Return)
 genFunction :: R.Function -> Either String WasmFunc
 genFunction (R.Function name funcType locals body) = do
     builder <- Vector.foldM' (\acc e -> (acc <>) <$> genStatement 0 e) Builder.empty body
-    let instrVec = Builder.build builder
-        FunctionType params _ = funcType
+    let builder' = if returnType == TypeVoid
+            then builder
+            else builder <> Builder.singleton Wasm.Unreachable
+        instrVec = Builder.build builder'
         localVec = genLocalVec (Vector.drop (length params) locals)
         type_ = genFunctionType funcType
     return (WasmFunc name type_ localVec instrVec)
+    where
+    FunctionType params returnType = funcType
 
 genFunctionDeclaration :: (Text, FunctionType) -> Wasm.Import
 genFunctionDeclaration (name, funcType) =

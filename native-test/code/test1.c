@@ -53,8 +53,8 @@ bool assert_int(int expected, int actual, string expr) {
     } else {
         printf_s_i_i("NG %s => %d expected, but got %d\n", expr, expected, actual);
         failure = failure + 1;
+        return false;
     }
-    return false;
 }
 
 bool assert_bool(bool expected, bool actual, string expr) {
@@ -64,13 +64,14 @@ bool assert_bool(bool expected, bool actual, string expr) {
     } else {
         printf_s_s_s("NG %s => %s expected, but got %s\n", expr, show_bool(expected), show_bool(actual));
         failure = failure + 1;
+        return false;
     }
-    return false;
 }
 
 string show_bool(bool a) {
     if (a) {
         return "true";
+    } else {
+        return "false";
     }
-    return "false";
 }
